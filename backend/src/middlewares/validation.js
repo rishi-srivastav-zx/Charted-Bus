@@ -3,6 +3,11 @@ import { body, validationResult } from "express-validator";
 const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+        console.log("Validation Body:", JSON.stringify(req.body, null, 2));
+        console.log(
+            "Validation Errors:",
+            JSON.stringify(errors.array(), null, 2),
+        );
         return res.status(400).json({
             success: false,
             message: "Validation failed",
@@ -41,14 +46,20 @@ const loginValidation = [
 
 const validateBus = [
     body("name").trim().notEmpty().withMessage("Bus name is required"),
-    body("type").trim().notEmpty().withMessage("Bus type is required"),
-    body("capacity").isNumeric().withMessage("Capacity must be a number"),
-    body("pricePerHour").isNumeric().withMessage("Price per hour must be a number"),
+    body("category").trim().notEmpty().withMessage("Category is required"),
+    body("seatCapacity")
+        .isNumeric()
+        .withMessage("Seat capacity must be a number"),
+    body("pricing.price").isNumeric().withMessage("Price must be a number"),
     handleValidationErrors,
 ];
 
-const validateQuery = [
-    handleValidationErrors,
-];
+const validateQuery = [handleValidationErrors];
 
-export { registerValidation, loginValidation, handleValidationErrors, validateBus, validateQuery };
+export {
+    registerValidation,
+    loginValidation,
+    handleValidationErrors,
+    validateBus,
+    validateQuery,
+};
