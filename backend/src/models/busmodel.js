@@ -44,14 +44,7 @@ const VehicleSchema = new mongoose.Schema(
         image: { type: String },
         category: {
             type: String,
-            enum: [
-                "Sedan",
-                "SUV",
-                "Van",
-                "Luxury",
-                "Mini Bus",
-                "Tempo Traveller",
-            ],
+            enum: ["Luxury Coach", "Mini Bus", "Volvo Bus", "Sleeper Bus", "AC Deluxe", "Non-AC Standard"],
         },
         seatCapacity: { type: Number },
         isMostPopular: { type: Boolean, default: false },

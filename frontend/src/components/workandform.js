@@ -57,14 +57,12 @@ export const QuoteForm = () => {
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">Pickup Location</label>
               <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input type="text" placeholder="City, State or Zip" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all" />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">Destination</label>
               <div className="relative">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input type="text" placeholder="City, State or Zip" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all" />
               </div>
             </div>
@@ -75,7 +73,6 @@ export const QuoteForm = () => {
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-wider">Passengers</label>
               <div className="relative">
-                <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input type="number" placeholder="Number of people" className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all" />
               </div>
             </div>

@@ -186,7 +186,7 @@ export async function updateBus(req, res) {
         }
 
         if (
-            bus.operator.toString() !== req.user.id &&
+            bus.createdBy.toString() !== req.user.id &&
             req.user.role !== "admin" &&
             req.user.role !== "superadmin"
         ) {
@@ -230,7 +230,7 @@ export async function deleteBus(req, res) {
         }
 
         if (
-            bus.operator.toString() !== req.user.id &&
+            bus.createdBy.toString() !== req.user.id &&
             req.user.role !== "admin"
         ) {
             return res

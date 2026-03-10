@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
     Search,
     Plus,
@@ -29,12 +29,14 @@ import {
     LayoutGrid,
     Sparkles,
     Navigation,
+    Edit3,
+    Trash2,
+    Eye,
 } from "lucide-react";
 import { cn } from "@/app/lib/uitls";
 import BusForm from "./busform";
-import { getAllBuses } from "@/services/busservices";
+import { getAllBuses, deleteBus } from "@/services/busservices";
 
-// ─── API ──────────────────────────────────────────────────────────────────────
 async function fetchVehicles() {
     try {
         const res = await getAllBuses();
@@ -45,7 +47,6 @@ async function fetchVehicles() {
     }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 const CURRENCY_SYMBOLS = { USD: "$", INR: "₹", EUR: "€", GBP: "£", AED: "د.إ" };
 function currSym(code) {
     return CURRENCY_SYMBOLS[code] ?? "$";
@@ -54,8 +55,8 @@ function currSym(code) {
 function StatusBadge({ status }) {
     const map = {
         Active: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-        Maintenance: "bg-amber-500/10  text-amber-600  border-amber-500/20",
-        Inactive: "bg-slate-400/10  text-slate-500  border-slate-400/20",
+        Maintenance: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+        Inactive: "bg-slate-400/10 text-slate-500 border-slate-400/20",
     };
     return (
         <span
@@ -128,7 +129,95 @@ function FeaturePill({ name }) {
     );
 }
 
-function VehicleCard({ bus, onSelect }) {
+// ─── Three-dot Context Menu ───────────────────────────────────────────────────
+function CardMenu({ bus, onView, onEdit, onDelete }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e) => {
+            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [open]);
+
+    const items = [
+        {
+            icon: Eye,
+            label: "View Details",
+            className: "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+            action: () => {
+                onView?.(bus);
+                setOpen(false);
+            },
+        },
+        {
+            icon: Edit3,
+            label: "Edit Vehicle",
+            className: "text-blue-600 hover:bg-blue-50",
+            action: () => {
+                onEdit?.(bus);
+                setOpen(false);
+            },
+        },
+        {
+            icon: Trash2,
+            label: "Delete",
+            className: "text-red-500 hover:bg-red-50",
+            divider: true,
+            action: () => {
+                onDelete?.(bus);
+                setOpen(false);
+            },
+        },
+    ];
+
+    return (
+        <div
+            ref={ref}
+            className="relative"
+            onClick={(e) => e.stopPropagation()}
+        >
+            <button
+                onClick={() => setOpen((v) => !v)}
+                className={cn(
+                    "p-1.5 rounded-lg transition-all duration-150",
+                    open
+                        ? "bg-slate-100 text-slate-800"
+                        : "text-slate-300 hover:text-slate-700 hover:bg-slate-100",
+                )}
+            >
+                <MoreVertical size={16} />
+            </button>
+            {open && (
+                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-menu-pop">
+                    {items.map((item, i) => (
+                        <React.Fragment key={i}>
+                            {item.divider && (
+                                <div className="h-px bg-slate-100 mx-2 my-0.5" />
+                            )}
+                            <button
+                                onClick={item.action}
+                                className={cn(
+                                    "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-semibold transition-colors text-left",
+                                    item.className,
+                                )}
+                            >
+                                <item.icon size={14} />
+                                {item.label}
+                            </button>
+                        </React.Fragment>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Vehicle Card ─────────────────────────────────────────────────────────────
+function VehicleCard({ bus, onSelect, onEdit, onDelete }) {
     const sym = currSym(bus.pricing?.currency);
     const discount = bus.pricing?.discountPercent;
 
@@ -150,9 +239,7 @@ function VehicleCard({ bus, onSelect }) {
                         <Car className="w-16 h-16 text-slate-200" />
                     </div>
                 )}
-
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300" />
-
                 <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                     {bus.isMostPopular && (
                         <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-500 text-white rounded-full text-[10px] font-black tracking-wider shadow-lg">
@@ -171,7 +258,6 @@ function VehicleCard({ bus, onSelect }) {
                         </span>
                     )}
                 </div>
-
                 <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
                     <StatusBadge status={bus.status} />
                     {discount > 0 && (
@@ -180,7 +266,6 @@ function VehicleCard({ bus, onSelect }) {
                         </span>
                     )}
                 </div>
-
                 <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
                     <div className="bg-white/95 backdrop-blur-md rounded-xl px-4 py-3 flex items-center justify-between shadow-lg border border-white/20">
                         <div>
@@ -214,24 +299,22 @@ function VehicleCard({ bus, onSelect }) {
             </div>
 
             <div className="p-5 flex flex-col flex-grow">
-                <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-black text-slate-900 text-base leading-tight line-clamp-1">
+                <div className="flex justify-between items-start mb-1 gap-2">
+                    <h3 className="font-black text-slate-900 text-base leading-tight line-clamp-1 flex-1">
                         {bus.name}
                     </h3>
-                    <button
-                        className="text-slate-300 hover:text-slate-700 transition-colors p-1 -mr-1"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <MoreVertical size={16} />
-                    </button>
+                    <CardMenu
+                        bus={bus}
+                        onView={onSelect}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                    />
                 </div>
-
                 {bus.creatorRole && (
                     <span className="inline-block text-[10px] font-bold tracking-wider uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded mb-2 border border-blue-100 w-fit">
                         Created by {bus.creatorRole}
                     </span>
                 )}
-
                 {bus.licensePlate && (
                     <span className="inline-block text-[10px] font-bold tracking-widest uppercase text-slate-400 bg-slate-50 px-2 py-0.5 rounded mb-3 font-mono border border-slate-100 w-fit">
                         {bus.licensePlate}
@@ -348,7 +431,21 @@ function VehicleCard({ bus, onSelect }) {
     );
 }
 
-function VehicleDrawer({ bus, onClose }) {
+// ─── Section helper ───────────────────────────────────────────────────────────
+function Section({ title, children }) {
+    return (
+        <div>
+            <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+                <div className="h-px w-4 bg-slate-300"></div>
+                {title}
+            </h4>
+            {children}
+        </div>
+    );
+}
+
+// ─── Detail Drawer ────────────────────────────────────────────────────────────
+function VehicleDrawer({ bus, onClose, onEdit }) {
     if (!bus) return null;
     const sym = currSym(bus.pricing?.currency);
 
@@ -369,12 +466,23 @@ function VehicleDrawer({ bus, onClose }) {
                 }}
             >
                 <div className="sticky top-0 z-10 bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 pb-8">
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center justify-between mb-4">
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={() => {
+                                onClose();
+                                onEdit?.(bus);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white rounded-xl text-sm font-bold transition-all shadow-lg"
+                        >
+                            <Edit3 size={14} /> Edit Vehicle
+                        </button>
+                    </div>
                     {bus.image && (
                         <div className="relative w-full h-44 rounded-xl overflow-hidden mb-4 ring-2 ring-white/20 shadow-lg">
                             <img
@@ -413,7 +521,7 @@ function VehicleDrawer({ bus, onClose }) {
                                 </span>
                             )}
                             {bus.isElectric && (
-                                <span className="px-2 py-0.5 bg-green-500  rounded-full text-[10px] font-black">
+                                <span className="px-2 py-0.5 bg-green-500 rounded-full text-[10px] font-black">
                                     EV
                                 </span>
                             )}
@@ -629,7 +737,6 @@ function VehicleDrawer({ bus, onClose }) {
                             </div>
                         </Section>
                     )}
-
                     {bus.exclusions?.length > 0 && (
                         <Section title="Exclusions">
                             <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm space-y-2">
@@ -647,7 +754,6 @@ function VehicleDrawer({ bus, onClose }) {
                             </div>
                         </Section>
                     )}
-
                     {bus.features?.length > 0 && (
                         <Section title="Features">
                             <div className="flex flex-wrap gap-2">
@@ -663,7 +769,6 @@ function VehicleDrawer({ bus, onClose }) {
                             </div>
                         </Section>
                     )}
-
                     {bus.addOns?.length > 0 && (
                         <Section title="Add-ons">
                             <div className="space-y-2">
@@ -691,7 +796,6 @@ function VehicleDrawer({ bus, onClose }) {
                             </div>
                         </Section>
                     )}
-
                     {bus.additionalInfo?.length > 0 && (
                         <Section title="Additional Information">
                             <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm space-y-3">
@@ -711,7 +815,6 @@ function VehicleDrawer({ bus, onClose }) {
                             </div>
                         </Section>
                     )}
-
                     {bus.policies?.length > 0 && (
                         <Section title="Policies">
                             <div className="space-y-3">
@@ -751,14 +854,99 @@ function VehicleDrawer({ bus, onClose }) {
     );
 }
 
-function Section({ title, children }) {
+// ─── Delete Confirm ───────────────────────────────────────────────────────────
+function DeleteConfirmDialog({ bus, onConfirm, onCancel, isDeleting }) {
+    if (!bus) return null;
     return (
-        <div>
-            <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
-                <div className="h-px w-4 bg-slate-300"></div>
-                {title}
-            </h4>
-            {children}
+        <div
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div
+                className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+                onClick={onCancel}
+            />
+            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 w-full max-w-sm animate-modal-pop">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Trash2 className="w-6 h-6 text-red-500" />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 text-center mb-1">
+                    Delete Vehicle?
+                </h3>
+                <p className="text-sm text-slate-500 text-center mb-6">
+                    <span className="font-bold text-slate-700">{bus.name}</span>{" "}
+                    will be permanently removed. This cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={onCancel}
+                        className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={isDeleting}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {isDeleting ? "Deleting…" : "Yes, Delete"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Edit Modal ───────────────────────────────────────────────────────────────
+function EditModal({ bus, onClose }) {
+    if (!bus) return null;
+    return (
+        <div
+            className="fixed inset-0 z-[150] flex items-start justify-center overflow-y-auto py-6 px-4"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div
+                className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"
+                onClick={onClose}
+            />
+            <div
+                className="relative w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-modal-pop"
+                style={{ maxWidth: "96rem" }}
+            >
+                <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400" />
+                <button
+                    onClick={onClose}
+                    className="absolute right-4 top-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 hover:rotate-90 transition-all duration-300 shadow-sm border border-slate-200"
+                >
+                    <X className="h-5 w-5" />
+                </button>
+                <div className="p-6 md:p-10 bg-white">
+                    <div className="mb-6 flex items-center gap-3">
+                        <div className="p-2.5 bg-amber-100 rounded-xl">
+                            <Edit3 className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-black text-slate-800">
+                                Edit Vehicle
+                            </h3>
+                            <p className="text-slate-500 text-sm mt-0.5">
+                                Updating details for{" "}
+                                <span className="font-bold text-slate-700">
+                                    {bus.name}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    <BusForm
+                        initialData={bus}
+                        vehicleId={bus._id ?? bus.id}
+                        onSuccess={onClose}
+                    />
+                </div>
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
+            </div>
         </div>
     );
 }
@@ -769,6 +957,9 @@ export const InventoryView = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [openModal, setOpenModal] = useState(false);
+    const [editBus, setEditBus] = useState(null);
+    const [deleteBusTarget, setDeleteBusTarget] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [selected, setSelected] = useState(null);
     const [search, setSearch] = useState("");
     const [filterCategory, setFilterCategory] = useState("All");
@@ -795,9 +986,27 @@ export const InventoryView = () => {
         loadVehicles();
     }, [loadVehicles, refreshKey]);
 
-    const handleModalClose = () => {
+    const handleAddClose = () => {
         setOpenModal(false);
         setRefreshKey((k) => k + 1);
+    };
+    const handleEditClose = () => {
+        setEditBus(null);
+        setRefreshKey((k) => k + 1);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!deleteBusTarget) return;
+        setIsDeleting(true);
+        try {
+            await deleteBus(deleteBusTarget._id ?? deleteBusTarget.id);
+            setDeleteBusTarget(null);
+            setRefreshKey((k) => k + 1);
+        } catch (err) {
+            console.error("Delete failed:", err);
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     const active = vehicles.filter(
@@ -814,11 +1023,11 @@ export const InventoryView = () => {
               ) / vehicles.length,
           )
         : 0;
-
     const categories = [
         "All",
         ...new Set(vehicles.map((v) => v.category).filter(Boolean)),
     ];
+
     const filtered = vehicles.filter((v) => {
         const matchSearch =
             !search ||
@@ -834,10 +1043,9 @@ export const InventoryView = () => {
         : "$";
 
     return (
-        // ✅ NO blur / scale / brightness — clean wrapper
         <div className="min-h-screen">
             <div className="space-y-6 md:p-4 w-full mx-auto">
-                {/* ── Header ── */}
+                {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                     <div>
                         <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -868,7 +1076,7 @@ export const InventoryView = () => {
                     </div>
                 </div>
 
-                {/* ── Stats ── */}
+                {/* Stats */}
                 {!loading && vehicles.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <StatCard
@@ -898,33 +1106,29 @@ export const InventoryView = () => {
                     </div>
                 )}
 
-                {/* ── Filters ── */}
+                {/* Filters */}
                 <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-3 items-center">
-                    {/* Search Input */}
                     <div className="relative flex-1 w-full sm:max-w-xs">
                         <Search
                             size={15}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-900 pointer-events-none"
+                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                         />
                         <input
                             type="text"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Search name or plate…"
-                            className="w-full  pr-4 py-2.5 !pl-10 bg-slate-50 border border-slate-200 left-6 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                            className="w-full !pl-[2.2rem] pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
                         />
                     </div>
-
-                    {/* Filters */}
                     <div className="flex gap-3 w-full sm:w-auto">
-                        {/* Category Select */}
                         <div className="relative flex-1 sm:flex-none">
                             <select
                                 value={filterCategory}
                                 onChange={(e) =>
                                     setFilterCategory(e.target.value)
                                 }
-                                className="appearance-none !pl-10 w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-8 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-slate-700 cursor-pointer"
+                                className="appearance-none w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-8 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium text-slate-700 cursor-pointer"
                             >
                                 {categories.map((c) => (
                                     <option key={c} value={c}>
@@ -934,10 +1138,9 @@ export const InventoryView = () => {
                             </select>
                             <ChevronDown
                                 size={14}
-                                className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
                             />
                         </div>
-                        {/* Clear Button */}
                         {(search || filterCategory !== "All") && (
                             <button
                                 onClick={() => {
@@ -953,7 +1156,7 @@ export const InventoryView = () => {
                     </div>
                 </div>
 
-                {/* ── Error ── */}
+                {/* Error */}
                 {error && (
                     <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl p-4">
                         <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
@@ -969,7 +1172,7 @@ export const InventoryView = () => {
                     </div>
                 )}
 
-                {/* ── Grid ── */}
+                {/* Grid */}
                 {loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[...Array(6)].map((_, i) => (
@@ -999,6 +1202,8 @@ export const InventoryView = () => {
                                 key={bus._id ?? bus.id}
                                 bus={bus}
                                 onSelect={setSelected}
+                                onEdit={setEditBus}
+                                onDelete={setDeleteBusTarget}
                             />
                         ))}
                     </div>
@@ -1011,48 +1216,66 @@ export const InventoryView = () => {
                 )}
             </div>
 
-            {/* ── Add Vehicle Modal ── */}
+            {/* ADD Modal */}
             {openModal && (
-                // ✅ Portal-style: fixed, full-screen, z-[100], no effect on parent
                 <div
                     className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto py-6 px-4"
                     role="dialog"
                     aria-modal="true"
                 >
-                    {/* Backdrop — only blurs itself, never the dashboard */}
                     <div
                         className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"
-                        onClick={handleModalClose}
+                        onClick={handleAddClose}
                     />
-
-                    {/* ✅ Modal: max-w-[96rem] ≈ 8xl (Tailwind stops at 7xl=80rem, so we use inline style) */}
                     <div
                         className="relative w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-modal-pop"
-                        style={{ maxWidth: "96rem" }} /* 8xl = 96rem */
+                        style={{ maxWidth: "96rem" }}
                     >
-                        {/* Accent bar */}
                         <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 flex-shrink-0" />
-
-                        {/* Close */}
                         <button
-                            onClick={handleModalClose}
+                            onClick={handleAddClose}
                             className="absolute right-4 top-5 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-500 hover:rotate-90 transition-all duration-300 shadow-sm border border-slate-200"
                         >
                             <X className="h-5 w-5" />
                         </button>
-
-                        {/* Content */}
                         <div className="p-6 md:p-10 custom-scrollbar bg-white">
-                            <BusForm onSuccess={handleModalClose} />
+                            <div className="mb-6">
+                                <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2">
+                                    <Plus className="w-6 h-6 text-blue-600" />{" "}
+                                    Add New Vehicle
+                                </h3>
+                                <p className="text-slate-500 text-sm mt-1">
+                                    Fill in the details to register a new
+                                    vehicle to the fleet.
+                                </p>
+                            </div>
+                            <BusForm onSuccess={handleAddClose} />
                         </div>
-
                         <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
                     </div>
                 </div>
             )}
 
-            {/* ── Detail Drawer ── */}
-            <VehicleDrawer bus={selected} onClose={() => setSelected(null)} />
+            {/* EDIT Modal */}
+            <EditModal bus={editBus} onClose={handleEditClose} />
+
+            {/* Detail Drawer */}
+            <VehicleDrawer
+                bus={selected}
+                onClose={() => setSelected(null)}
+                onEdit={(bus) => {
+                    setSelected(null);
+                    setEditBus(bus);
+                }}
+            />
+
+            {/* Delete Confirm */}
+            <DeleteConfirmDialog
+                bus={deleteBusTarget}
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setDeleteBusTarget(null)}
+                isDeleting={isDeleting}
+            />
 
             <style jsx global>{`
                 @keyframes modal-pop {
@@ -1067,6 +1290,20 @@ export const InventoryView = () => {
                 }
                 .animate-modal-pop {
                     animation: modal-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1)
+                        forwards;
+                }
+                @keyframes menu-pop {
+                    0% {
+                        opacity: 0;
+                        transform: scale(0.93) translateY(-6px);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: scale(1) translateY(0);
+                    }
+                }
+                .animate-menu-pop {
+                    animation: menu-pop 0.18s cubic-bezier(0.16, 1, 0.3, 1)
                         forwards;
                 }
                 .custom-scrollbar::-webkit-scrollbar {

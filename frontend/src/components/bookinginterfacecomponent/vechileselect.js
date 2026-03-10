@@ -30,138 +30,23 @@ import {
     Fuel,
     Briefcase,
     Shield,
+    Zap,
+    Coffee,
+    Plug,
+    BedDouble,
+    UtensilsCrossed,
+    Music2,
+    Thermometer,
+    MonitorPlay,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { getAllBuses } from "@/services/busservices";
 
 // Utility for tailwind class merging
 function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
-
-// --- Mock Data (Same as VehicleListing) ---
-const VEHICLES = [
-    {
-        id: 1,
-        name: "Mercedes-Benz Sprinter",
-        price: 120,
-        originalPrice: 140,
-        discount: 14,
-        passengers: 14,
-        luggage: 10,
-        image: "https://upload.wikimedia.org/wikipedia/commons/a/a2/2019_Mercedes-Benz_Sprinter_314_CDi_2.1.jpg",
-        amenities: ["Wifi", "AC", "Leather", "TV"],
-        badge: "Most Popular",
-        category: "small",
-        inclusions: [
-            "Driver Allowance",
-            "Base Fare for 145 km",
-            "State Tax & Toll",
-            "Only One Pickup and Drop",
-            "GST (5%)",
-            "10 bags",
-            "AC",
-        ],
-        exclusions: [
-            "Parking charges",
-            "Night charges (10 PM - 6 AM)",
-            "Additional km beyond 145 km @ ₹12/km",
-        ],
-        extraKmRate: 12,
-        includedKms: 145,
-        taxes: 400,
-    },
-    {
-        id: 2,
-        name: "Luxury Mini Coach",
-        price: 180,
-        originalPrice: 210,
-        discount: 15,
-        passengers: 30,
-        luggage: 25,
-        image: "https://amrutatravel.com/img/amruta.jpeg",
-        amenities: ["Wifi", "AC", "TV", "Restroom"],
-        badge: null,
-        category: "medium",
-        inclusions: [
-            "Driver Allowance",
-            "Base Fare for 200 km",
-            "State Tax & Toll",
-            "Multiple Pickup Points",
-            "GST (5%)",
-            "25 bags",
-            "AC",
-        ],
-        exclusions: [
-            "Parking charges",
-            "Interstate permits",
-            "Additional km beyond 200 km @ ₹18/km",
-        ],
-        extraKmRate: 18,
-        includedKms: 200,
-        taxes: 600,
-    },
-    {
-        id: 3,
-        name: "Premium Motorcoach",
-        price: 250,
-        originalPrice: 290,
-        discount: 14,
-        passengers: 55,
-        luggage: 50,
-        image: "https://canadianfamilyoffices.com/app/uploads/2024/09/Cornerstone-RV-exterior.jpg",
-        amenities: ["Wifi", "Power", "Restroom", "TV"],
-        badge: "Best Value",
-        category: "large",
-        inclusions: [
-            "Driver Allowance",
-            "Base Fare for 250 km",
-            "State Tax & Toll",
-            "Multiple Pickup Points",
-            "GST (5%)",
-            "50 bags",
-            "AC",
-        ],
-        exclusions: [
-            "Parking charges",
-            "Driver accommodation (for multi-day)",
-            "Additional km beyond 250 km @ ₹25/km",
-        ],
-        extraKmRate: 25,
-        includedKms: 250,
-        taxes: 800,
-    },
-    {
-        id: 4,
-        name: "Executive Sleeper",
-        price: 350,
-        originalPrice: 400,
-        discount: 12,
-        passengers: 12,
-        luggage: 15,
-        image: "https://assets.volvo.com/is/image/VolvoInformationTechnologyAB/15m-bus?dpr=off&fit=constrain&qlt=82&ts=1640080438967&wid=1024",
-        amenities: ["Beds", "Kitchen", "TV", "Wifi"],
-        badge: "Premium",
-        category: "small",
-        inclusions: [
-            "Driver Allowance",
-            "Base Fare for 300 km",
-            "State Tax & Toll",
-            "Overnight accommodation",
-            "GST (5%)",
-            "15 bags",
-            "AC",
-        ],
-        exclusions: [
-            "Parking charges",
-            "Meals for passengers",
-            "Additional km beyond 300 km @ ₹35/km",
-        ],
-        extraKmRate: 35,
-        includedKms: 300,
-        taxes: 1000,
-    },
-];
 
 const FILTERS = [
     { id: "all", label: "All Vehicles" },
@@ -171,40 +56,171 @@ const FILTERS = [
 ];
 
 // Currency formatter
-const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-IN", {
+const formatCurrency = (amount, currency = "USD") => {
+    return new Intl.NumberFormat("en-US", {
         style: "currency",
-        currency: "INR",
+        currency: currency,
         maximumFractionDigits: 0,
     }).format(amount);
 };
 
-// Amenity Icon Component
-const AmenityIcon = ({ name }) => {
-    const icons = {
-        Wifi: <Wifi className="w-4 h-4" />,
-        AC: <Wind className="w-4 h-4" />,
-        TV: <Tv className="w-4 h-4" />,
-        Leather: <Armchair className="w-4 h-4" />,
-        Restroom: <div className="text-[10px] font-bold">WC</div>,
-        Power: <div className="text-[10px] font-bold">P</div>,
-        Beds: <div className="text-[10px] font-bold">BED</div>,
-        Kitchen: <div className="text-[10px] font-bold">KIT</div>,
-    };
+// Amenity icon map — add as many as needed; unknown ones get a text badge
+const AMENITY_ICONS = {
+    Wifi:               <Wifi className="w-4 h-4" />,
+    AC:                 <Wind className="w-4 h-4" />,
+    "Air Conditioning": <Wind className="w-4 h-4" />,
+    TV:                 <Tv className="w-4 h-4" />,
+    Leather:            <Armchair className="w-4 h-4" />,
+    Seats:              <Armchair className="w-4 h-4" />,
+    Restroom:           <MonitorPlay className="w-4 h-4" />,
+    WC:                 <MonitorPlay className="w-4 h-4" />,
+    Power:              <Plug className="w-4 h-4" />,
+    "USB Charging":     <Plug className="w-4 h-4" />,
+    USB:                <Plug className="w-4 h-4" />,
+    Outlet:             <Zap className="w-4 h-4" />,
+    Beds:               <BedDouble className="w-4 h-4" />,
+    Bed:                <BedDouble className="w-4 h-4" />,
+    Kitchen:            <UtensilsCrossed className="w-4 h-4" />,
+    Food:               <UtensilsCrossed className="w-4 h-4" />,
+    Music:              <Music2 className="w-4 h-4" />,
+    Entertainment:      <Music2 className="w-4 h-4" />,
+    Heating:            <Thermometer className="w-4 h-4" />,
+    Coffee:             <Coffee className="w-4 h-4" />,
+    Refreshments:       <Coffee className="w-4 h-4" />,
+};
 
+// Single amenity chip — shows icon if available, else a compact text badge
+const AmenityChip = ({ name, size = "sm" }) => {
+    const icon = AMENITY_ICONS[name];
+    const isSmall = size === "sm";
     return (
-        <div className="flex flex-col items-center gap-1 text-slate-500">
-            {icons[name] || <div className="w-4 h-4" />}
-            <span className="text-[10px] uppercase font-medium">{name}</span>
+        <div
+            className={`flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600 ${
+                isSmall ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+            } font-medium`}
+        >
+            {icon
+                ? <span className={isSmall ? "w-3.5 h-3.5 flex items-center justify-center" : "w-4 h-4 flex items-center justify-center"}>
+                    {icon}
+                  </span>
+                : <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />}
+            <span>{name}</span>
         </div>
     );
 };
 
-// Vehicle Card Component (Integrated from VehicleListing)
+// Amenity Icon Component (kept for backwards compat if used elsewhere)
+const AmenityIcon = ({ name }) => <AmenityChip name={name} />;
+
+// Collapsible Section Component
+const CollapsibleSection = ({
+    title,
+    items,
+    type = "check",
+    maxVisible = 4,
+}) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const hasMore = items.length > maxVisible;
+    const visibleItems = isExpanded ? items : items.slice(0, maxVisible);
+    const hiddenCount = items.length - maxVisible;
+
+    return (
+        <div>
+            <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <div
+                    className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center",
+                        type === "check" ? "bg-green-100" : "bg-red-100",
+                    )}
+                >
+                    {type === "check" ? (
+                        <Check className="w-4 h-4 text-green-600" />
+                    ) : (
+                        <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    )}
+                </div>
+                {title}
+            </h4>
+            <ul className="space-y-3">
+                {visibleItems.map((item, idx) => (
+                    <li
+                        key={idx}
+                        className="flex items-start gap-3 text-sm text-slate-700"
+                    >
+                        {type === "check" ? (
+                            <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        ) : (
+                            <div className="w-4 h-4 rounded-full border-2 border-red-300 flex-shrink-0 mt-0.5" />
+                        )}
+                        <span>{item}</span>
+                    </li>
+                ))}
+            </ul>
+            {hasMore && (
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="mt-3 flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+                >
+                    {isExpanded ? (
+                        <>
+                            <ChevronUp className="w-4 h-4" />
+                            Show Less
+                        </>
+                    ) : (
+                        <>
+                            <ChevronDown className="w-4 h-4" />
+                            Show {hiddenCount} More
+                        </>
+                    )}
+                </button>
+            )}
+        </div>
+    );
+};
+
+// ─── Amenities All-View Popup ───────────────────────────────────────────────
+const AmenitiesPopup = ({ amenities, onClose }) => (
+    <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+    >
+        <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-fadeInDown"
+            onClick={(e) => e.stopPropagation()}
+        >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-slate-900">All Amenities</h3>
+                <button
+                    onClick={onClose}
+                    className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
+                >
+                    <X className="w-4 h-4 text-slate-500" />
+                </button>
+            </div>
+
+            {/* Grid of chips */}
+            <div className="flex flex-wrap gap-2">
+                {amenities.map((a) => (
+                    <AmenityChip key={a} name={a} size="md" />
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
+// Vehicle Card Component
 const VehicleCard = ({ vehicle, isSelected, onSelect }) => {
     const [showDetails, setShowDetails] = useState(false);
+    const [showAllAmenities, setShowAllAmenities] = useState(false);
 
-    const totalPrice = vehicle.price + vehicle.taxes;
+    const totalPrice = (vehicle?.price || 0) + (vehicle?.taxes || 0);
+    const allAmenities   = vehicle?.amenities || [];
+    const MAX_VISIBLE    = 3;
+    const visibleAmenities = allAmenities.slice(0, MAX_VISIBLE);
+    const hiddenCount    = allAmenities.length - MAX_VISIBLE;
+
+    if (!vehicle) return null;
 
     return (
         <div
@@ -221,11 +237,14 @@ const VehicleCard = ({ vehicle, isSelected, onSelect }) => {
                     {/* Left: Image */}
                     <div className="relative w-full lg:w-48 h-32 lg:h-32 flex-shrink-0">
                         <img
-                            src={vehicle.image}
-                            alt={vehicle.name}
+                            src={
+                                vehicle?.image ||
+                                "https://via.placeholder.com/400x300"
+                            }
+                            alt={vehicle?.name || "Vehicle"}
                             className="w-full h-full object-cover rounded-xl"
                         />
-                        {vehicle.badge && (
+                        {vehicle?.badge && (
                             <div
                                 className={cn(
                                     "absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold text-white shadow-md flex items-center gap-1",
@@ -249,11 +268,11 @@ const VehicleCard = ({ vehicle, isSelected, onSelect }) => {
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                             <div>
                                 <h3 className="text-xl font-bold text-slate-900 mb-1">
-                                    {vehicle.name}
+                                    {vehicle?.name || "Charter Bus"}
                                 </h3>
                                 <p className="text-slate-500 text-sm mb-3">
-                                    or equivalent | {vehicle.passengers} seater
-                                    AC Cab
+                                    or equivalent | {vehicle?.passengers || 0}{" "}
+                                    seater AC Cab
                                 </p>
 
                                 <div className="flex items-center gap-4 text-sm text-slate-600">
@@ -266,53 +285,89 @@ const VehicleCard = ({ vehicle, isSelected, onSelect }) => {
                                 <div className="flex items-center gap-2 mt-2 text-sm text-slate-600">
                                     <Fuel className="w-4 h-4 text-blue-500" />
                                     <span className="font-medium text-slate-700">
-                                        {vehicle.includedKms} kms included
+                                        {vehicle?.includedKms || 0} kms included
                                     </span>
                                     <span className="text-slate-400">|</span>
                                     <span>
                                         Post limit:{" "}
-                                        {formatCurrency(vehicle.extraKmRate)}/km
+                                        {formatCurrency(
+                                            vehicle?.extraKmRate || 0,
+                                            vehicle?.currency,
+                                        )}
+                                        /km
                                     </span>
                                 </div>
                             </div>
 
                             {/* Right: Pricing */}
                             <div className="text-right flex-shrink-0">
-                                {vehicle.discount > 0 && (
+                                {(vehicle?.discount || 0) > 0 && (
                                     <div className="flex items-center justify-end gap-2 mb-1">
                                         <span className="text-green-600 text-sm font-semibold flex items-center gap-1">
                                             <Shield className="w-3 h-3" />
-                                            {vehicle.discount}% OFF
+                                            {vehicle?.discount || 0}% OFF
                                         </span>
                                         <span className="text-slate-400 line-through text-sm">
                                             {formatCurrency(
-                                                vehicle.originalPrice,
+                                                vehicle?.originalPrice || 0,
+                                                vehicle?.currency,
                                             )}
                                         </span>
                                     </div>
                                 )}
 
                                 <div className="text-3xl font-bold text-blue-600">
-                                    {formatCurrency(vehicle.price)}
+                                    {formatCurrency(
+                                        vehicle?.price || 0,
+                                        vehicle?.currency,
+                                    )}
                                 </div>
 
                                 <div className="text-slate-500 text-sm mt-1">
-                                    + {formatCurrency(vehicle.taxes)} Charges
-                                    and Taxes
+                                    +{" "}
+                                    {formatCurrency(
+                                        vehicle?.taxes || 0,
+                                        vehicle?.currency,
+                                    )}{" "}
+                                    Charges and Taxes
                                 </div>
 
                                 <div className="text-xs text-slate-400 mt-1">
-                                    Total: {formatCurrency(totalPrice)}
+                                    Total:{" "}
+                                    {formatCurrency(
+                                        totalPrice,
+                                        vehicle?.currency,
+                                    )}
                                 </div>
                             </div>
                         </div>
 
                         {/* Amenities Row */}
-                        <div className="flex items-center gap-6 mt-4 pt-4 border-t border-slate-100">
-                            {vehicle.amenities.map((amenity) => (
-                                <AmenityIcon key={amenity} name={amenity} />
+                        <div className="flex items-center flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100">
+                            {visibleAmenities.map((amenity) => (
+                                <AmenityChip key={amenity} name={amenity} size="sm" />
                             ))}
+
+                            {hiddenCount > 0 && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowAllAmenities(true);
+                                    }}
+                                    className="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-orange-300 bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors text-[11px] font-semibold"
+                                >
+                                    +{hiddenCount} more
+                                </button>
+                            )}
                         </div>
+
+                        {/* Amenities Popup */}
+                        {showAllAmenities && (
+                            <AmenitiesPopup
+                                amenities={allAmenities}
+                                onClose={() => setShowAllAmenities(false)}
+                            />
+                        )}
                     </div>
 
                     {/* Select Button - Desktop */}
@@ -326,7 +381,7 @@ const VehicleCard = ({ vehicle, isSelected, onSelect }) => {
                                     : "bg-orange-500 text-white hover:bg-orange-600 hover:shadow-lg hover:-translate-y-0.5",
                             )}
                         >
-                            {isSelected ? "SELECTED" : "SELECT CAR"}
+                            {isSelected ? "SELECTED" : "SELECT BUS"}
                         </button>
 
                         {isSelected && (
@@ -361,52 +416,26 @@ const VehicleCard = ({ vehicle, isSelected, onSelect }) => {
                             <Check className="w-3 h-3" />
                         </div>
                         <span className="font-medium">
-                            New Car Promise - Model that is 2023 or newer @ ₹249
+                            New Car Promise - Model that is 2023 or newer @ $249
                         </span>
                     </div>
 
                     <div className="p-6 grid md:grid-cols-2 gap-8">
-                        {/* Inclusions */}
-                        <div>
-                            <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                    <Check className="w-4 h-4 text-green-600" />
-                                </div>
-                                Inclusions
-                            </h4>
-                            <ul className="space-y-3">
-                                {vehicle.inclusions.map((item, idx) => (
-                                    <li
-                                        key={idx}
-                                        className="flex items-start gap-3 text-sm text-slate-700"
-                                    >
-                                        <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                                        <span>{item}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                        {/* Inclusions with Show More/Less */}
+                        <CollapsibleSection
+                            title="Inclusions"
+                            items={vehicle?.inclusions || []}
+                            type="check"
+                            maxVisible={4}
+                        />
 
-                        {/* Exclusions */}
-                        <div>
-                            <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                                    <div className="w-2 h-2 bg-red-500 rounded-full" />
-                                </div>
-                                Exclusions
-                            </h4>
-                            <ul className="space-y-3">
-                                {vehicle.exclusions.map((item, idx) => (
-                                    <li
-                                        key={idx}
-                                        className="flex items-start gap-3 text-sm text-slate-700"
-                                    >
-                                        <div className="w-4 h-4 rounded-full border-2 border-red-300 flex-shrink-0 mt-0.5" />
-                                        <span>{item}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                        {/* Exclusions with Show More/Less */}
+                        <CollapsibleSection
+                            title="Exclusions"
+                            items={vehicle?.exclusions || []}
+                            type="exclude"
+                            maxVisible={4}
+                        />
                     </div>
 
                     {/* Additional Info */}
@@ -418,7 +447,9 @@ const VehicleCard = ({ vehicle, isSelected, onSelect }) => {
                             <div className="grid sm:grid-cols-3 gap-4 text-sm">
                                 <div className="flex items-center gap-2 text-slate-600">
                                     <Briefcase className="w-4 h-4 text-blue-500" />
-                                    <span>{vehicle.luggage} bags included</span>
+                                    <span>
+                                        {vehicle?.luggage || 0} bags included
+                                    </span>
                                 </div>
                                 <div className="flex items-center gap-2 text-slate-600">
                                     <MapPin className="w-4 h-4 text-blue-500" />
@@ -452,8 +483,74 @@ const VehicleCard = ({ vehicle, isSelected, onSelect }) => {
     );
 };
 
+// ─── Country codes (module-level static list) ───────────────────────────────
+const COUNTRY_CODES = [
+    { code: "+1",   name: "USA / Canada" },
+    { code: "+7",   name: "Russia" },
+    { code: "+20",  name: "Egypt" },
+    { code: "+27",  name: "South Africa" },
+    { code: "+30",  name: "Greece" },
+    { code: "+31",  name: "Netherlands" },
+    { code: "+32",  name: "Belgium" },
+    { code: "+33",  name: "France" },
+    { code: "+34",  name: "Spain" },
+    { code: "+36",  name: "Hungary" },
+    { code: "+39",  name: "Italy" },
+    { code: "+40",  name: "Romania" },
+    { code: "+41",  name: "Switzerland" },
+    { code: "+43",  name: "Austria" },
+    { code: "+44",  name: "United Kingdom" },
+    { code: "+45",  name: "Denmark" },
+    { code: "+46",  name: "Sweden" },
+    { code: "+47",  name: "Norway" },
+    { code: "+48",  name: "Poland" },
+    { code: "+49",  name: "Germany" },
+    { code: "+52",  name: "Mexico" },
+    { code: "+55",  name: "Brazil" },
+    { code: "+60",  name: "Malaysia" },
+    { code: "+61",  name: "Australia" },
+    { code: "+62",  name: "Indonesia" },
+    { code: "+63",  name: "Philippines" },
+    { code: "+64",  name: "New Zealand" },
+    { code: "+65",  name: "Singapore" },
+    { code: "+66",  name: "Thailand" },
+    { code: "+81",  name: "Japan" },
+    { code: "+82",  name: "South Korea" },
+    { code: "+84",  name: "Vietnam" },
+    { code: "+86",  name: "China" },
+    { code: "+90",  name: "Turkey" },
+    { code: "+91",  name: "India" },
+    { code: "+92",  name: "Pakistan" },
+    { code: "+93",  name: "Afghanistan" },
+    { code: "+94",  name: "Sri Lanka" },
+    { code: "+95",  name: "Myanmar" },
+    { code: "+98",  name: "Iran" },
+    { code: "+212", name: "Morocco" },
+    { code: "+213", name: "Algeria" },
+    { code: "+216", name: "Tunisia" },
+    { code: "+234", name: "Nigeria" },
+    { code: "+254", name: "Kenya" },
+    { code: "+255", name: "Tanzania" },
+    { code: "+351", name: "Portugal" },
+    { code: "+352", name: "Luxembourg" },
+    { code: "+353", name: "Ireland" },
+    { code: "+358", name: "Finland" },
+    { code: "+380", name: "Ukraine" },
+    { code: "+420", name: "Czech Republic" },
+    { code: "+421", name: "Slovakia" },
+    { code: "+971", name: "UAE" },
+    { code: "+972", name: "Israel" },
+    { code: "+973", name: "Bahrain" },
+    { code: "+974", name: "Qatar" },
+    { code: "+975", name: "Bhutan" },
+    { code: "+976", name: "Mongolia" },
+    { code: "+977", name: "Nepal" },
+    { code: "+998", name: "Uzbekistan" },
+];
+
 // Contact Form Modal Component
 const ContactFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
+    const router = useRouter();
     const [formData, setFormData] = useState({
         countryCode: "+1",
         phone: "",
@@ -534,6 +631,8 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
         if (!hasErrors) {
             onSubmit(formData);
             onClose();
+            // Navigate to confirmation page from inside the modal
+            router.push("/bookingform/vechileselect/confirmation");
         }
     };
 
@@ -549,7 +648,7 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                         </h2>
                         <p className="text-sm text-slate-500">
                             Please provide your contact details
-                        </p>
+                        </p> 
                     </div>
                     <button
                         onClick={onClose}
@@ -565,18 +664,18 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                         <label className="block text-sm font-semibold text-slate-700 mb-2">
                             Phone Number <span className="text-red-500">*</span>
                         </label>
-                        <div className="flex gap-2">
+                        <div className="gap-2">
                             <select
                                 name="countryCode"
                                 value={formData.countryCode}
                                 onChange={handleChange}
-                                className="w-24 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                                className="w-36 shrink-0 py-2.5 px-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
                             >
-                                <option value="+1">+1</option>
-                                <option value="+44">+44</option>
-                                <option value="+61">+61</option>
-                                <option value="+91">+91</option>
-                                <option value="+81">+81</option>
+                                {COUNTRY_CODES.map((c) => (
+                                    <option key={c.code} value={c.code}>
+                                        {c.code} ({c.name})
+                                    </option>
+                                ))}
                             </select>
                             <input
                                 type="tel"
@@ -584,13 +683,8 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                                 value={formData.phone}
                                 onChange={handleChange}
                                 onBlur={handleBlur}
-                                placeholder="(555) 123-4567"
-                                className={cn(
-                                    "flex-1 px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all",
-                                    errors.phone && touched.phone
-                                        ? "border-red-300 focus:border-red-400 bg-red-50"
-                                        : "border-slate-200 focus:border-blue-400",
-                                )}
+                                className="flex-1 py-2.5 px-3 mt-3  bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                                placeholder="Enter your phone number"
                             />
                         </div>
                         {errors.phone && touched.phone && (
@@ -616,7 +710,7 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                                 onBlur={handleBlur}
                                 placeholder="john.doe@example.com"
                                 className={cn(
-                                    "w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all",
+                                    "w-full !pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all",
                                     errors.email && touched.email
                                         ? "border-red-300 focus:border-red-400 bg-red-50"
                                         : "border-slate-200 focus:border-blue-400",
@@ -646,7 +740,7 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                                 onBlur={handleBlur}
                                 placeholder="John"
                                 className={cn(
-                                    "w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all",
+                                    "w-full !pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all",
                                     errors.firstName && touched.firstName
                                         ? "border-red-300 focus:border-red-400 bg-red-50"
                                         : "border-slate-200 focus:border-blue-400",
@@ -676,7 +770,7 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                                 onBlur={handleBlur}
                                 placeholder="Doe"
                                 className={cn(
-                                    "w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all",
+                                    "w-full !pl-10 pr-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all",
                                     errors.lastName && touched.lastName
                                         ? "border-red-300 focus:border-red-400 bg-red-50"
                                         : "border-slate-200 focus:border-blue-400",
@@ -737,7 +831,7 @@ const formatDisplayDate = (dateStr) => {
 };
 
 const TripSummary = ({
-    tripDetails,
+    tripDetails: propTripDetails,
     selectedVehicle,
     onContinue,
     showError,
@@ -745,29 +839,90 @@ const TripSummary = ({
 }) => {
     const router = useRouter();
     const [showStops, setShowStops] = useState(false);
+    const [localTripDetails, setLocalTripDetails] = useState(null);
+
+    // Load from localStorage if prop not provided
+    useEffect(() => {
+        if (!propTripDetails) {
+            try {
+                const storedBooking = localStorage.getItem("bookingStep1");
+                const storedTrip = localStorage.getItem("tripDetails");
+
+                if (storedBooking) {
+                    const parsed = JSON.parse(storedBooking);
+                    setLocalTripDetails({
+                        formData: parsed,
+                        tripType: parsed.tripType || "one-way",
+                        timestamp: parsed.timestamp,
+                    });
+                } else if (storedTrip) {
+                    const parsed = JSON.parse(storedTrip);
+                    setLocalTripDetails({
+                        formData: parsed,
+                        tripType: parsed.tripType || "one-way",
+                    });
+                }
+            } catch (e) {
+                console.error(
+                    "Error loading trip details from localStorage:",
+                    e,
+                );
+            }
+        }
+    }, [propTripDetails]);
+
+    // Use prop data if available, otherwise use localStorage data
+    const tripDetails = propTripDetails || localTripDetails;
 
     const tripData = tripDetails?.formData || {};
     const tripType = tripDetails?.tripType || "one-way";
     const isRoundTrip = tripType === "round-trip";
     const isHourly = tripType === "hourly";
 
+    // Handle different data structures (direct or nested)
+    const getValue = (field, nestedField = null) => {
+        // Try direct access first
+        if (tripData[field]) return tripData[field];
+
+        // Try nested access (for round-trip structure)
+        if (isRoundTrip && tripData.outbound) {
+            return tripData.outbound[field] || tripData.outbound[nestedField];
+        }
+
+        return null;
+    };
+
     const pickup = isRoundTrip
-        ? tripData.outbound?.pickupAddress
+        ? tripData.outbound?.pickupAddress || tripData.pickupAddress
         : tripData.pickupAddress;
+
     const dropoff = isRoundTrip
-        ? tripData.outbound?.dropoffAddress
+        ? tripData.outbound?.dropoffAddress || tripData.dropoffAddress
         : tripData.dropoffAddress;
+
     const datetime = isRoundTrip
-        ? tripData.outbound?.datetime
+        ? tripData.outbound?.datetime || tripData.datetime
         : tripData.datetime;
+
     const passengers = isRoundTrip
-        ? tripData.outbound?.passengers
+        ? tripData.outbound?.passengers || tripData.passengers
         : tripData.passengers;
+
     const duration = isHourly ? tripData.duration : null;
-    const orderType = tripData.orderType || tripData.outbound?.orderType;
+
+    const orderType =
+        tripData.orderType ||
+        tripData.outbound?.orderType ||
+        tripData.bookingType;
+
     const stops = (
-        isRoundTrip ? tripData.outbound?.stops || [] : tripData.stops || []
-    ).filter((s) => s);
+        isRoundTrip
+            ? tripData.outbound?.stops || tripData.stops || []
+            : tripData.stops || []
+    ).filter((s) => s && s.trim());
+
+    // Check if we have any valid trip data
+    const hasTripData = pickup || dropoff || datetime;
 
     return (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm sticky top-24">
@@ -785,125 +940,148 @@ const TripSummary = ({
                 </span>
             </div>
 
-            <div className="space-y-6 relative">
-                {/* Vertical Line */}
-                <div className="absolute left-[11px] top-8 bottom-8 w-0.5 bg-slate-200" />
-
-                {/* Pickup */}
-                <div className="relative flex gap-4">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-blue-600 flex items-center justify-center shrink-0 z-10 mt-1">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full" />
+            {!hasTripData ? (
+                <div className="text-center py-8">
+                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <MapPin className="w-6 h-6 text-slate-400" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                            Pickup
-                        </div>
-                        <div className="font-bold text-slate-900 truncate">
-                            {pickup || "Enter Pickup Location"}
-                        </div>
-                        <div className="text-sm text-slate-500 mt-1">
-                            {formatDisplayDate(datetime)}
-                        </div>
-                    </div>
+                    <p className="text-sm text-slate-500 mb-4">
+                        No trip details found
+                    </p>
+                    <button
+                        onClick={() => router.push("/bookingform")}
+                        className="text-blue-600 font-medium text-sm hover:underline"
+                    >
+                        Start New Booking
+                    </button>
                 </div>
+            ) : (
+                <div className="space-y-6 relative">
+                    {/* Vertical Line */}
+                    <div className="absolute left-[11px] top-8 bottom-8 w-0.5 bg-slate-200" />
 
-                {/* Intermediate Stops Dropdown */}
-                {stops.length > 0 && (
-                    <div className="relative">
-                        <button
-                            onClick={() => setShowStops(!showStops)}
-                            className="flex items-center gap-1.5 text-[11px] font-black text-blue-600 hover:text-blue-700 transition-all ml-8 py-1 px-2 bg-blue-50 rounded-lg border border-blue-100 mb-1"
-                        >
-                            {showStops ? (
-                                <ChevronUp className="w-3 h-3" />
-                            ) : (
-                                <ChevronDown className="w-3 h-3" />
+                    {/* Pickup */}
+                    <div className="relative flex gap-4">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-blue-600 flex items-center justify-center shrink-0 z-10 mt-1">
+                            <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                Pickup
+                            </div>
+                            <div className="font-bold text-slate-900 truncate">
+                                {pickup || "Enter Pickup Location"}
+                            </div>
+                            <div className="text-sm text-slate-500 mt-1">
+                                {formatDisplayDate(datetime)}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Intermediate Stops Dropdown */}
+                    {stops.length > 0 && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowStops(!showStops)}
+                                className="flex items-center gap-1.5 text-[11px] font-black text-blue-600 hover:text-blue-700 transition-all ml-8 py-1 px-2 bg-blue-50 rounded-lg border border-blue-100 mb-1"
+                            >
+                                {showStops ? (
+                                    <ChevronUp className="w-3 h-3" />
+                                ) : (
+                                    <ChevronDown className="w-3 h-3" />
+                                )}
+                                {showStops ? "HIDE" : "SHOW"} {stops.length}{" "}
+                                STOPS
+                            </button>
+
+                            {showStops && (
+                                <div className="space-y-6 mt-6 animate-in slide-in-from-top-2 duration-300">
+                                    {stops.map((stop, index) => (
+                                        <div
+                                            key={index}
+                                            className="relative flex gap-4"
+                                        >
+                                            <div className="w-6 h-6 rounded-full bg-slate-50 border-2 border-slate-200 flex items-center justify-center shrink-0 z-10 mt-1">
+                                                <div className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.05em] mb-0.5">
+                                                    Stop {index + 1}
+                                                </div>
+                                                <div className="text-sm font-semibold text-slate-700 truncate">
+                                                    {stop}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
-                            {showStops ? "HIDE" : "SHOW"} {stops.length} STOPS
-                        </button>
-
-                        {showStops && (
-                            <div className="space-y-6 mt-6 animate-in slide-in-from-top-2 duration-300">
-                                {stops.map((stop, index) => (
-                                    <div
-                                        key={index}
-                                        className="relative flex gap-4"
-                                    >
-                                        <div className="w-6 h-6 rounded-full bg-slate-50 border-2 border-slate-200 flex items-center justify-center shrink-0 z-10 mt-1">
-                                            <div className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.05em] mb-0.5">
-                                                Stop {index + 1}
-                                            </div>
-                                            <div className="text-sm font-semibold text-slate-700 truncate">
-                                                {stop}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Dropoff */}
-                <div className="relative flex gap-4">
-                    <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center shrink-0 z-10 mt-1">
-                        <div className="w-2 h-2 bg-slate-400 rounded-full" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
-                            Dropoff
                         </div>
-                        <div className="font-bold text-slate-900 truncate">
-                            {dropoff || "Enter Dropoff Location"}
-                        </div>
-                        {isRoundTrip && tripData.return?.datetime && (
-                            <div className="text-sm text-blue-600 font-medium mt-3 flex items-center gap-1">
-                                <span className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px] font-black mr-1">
-                                    RETURN
-                                </span>
-                                {formatDisplayDate(tripData.return.datetime)}
-                            </div>
-                        )}
-                        {isRoundTrip && tripData.return?.stops?.length > 0 && (
-                            <p className="text-[10px] text-slate-400 italic mt-1 font-medium">
-                                + {tripData.return.stops.length} return stops
-                                included
-                            </p>
-                        )}
-                    </div>
-                </div>
-            </div>
+                    )}
 
-            <div className="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-slate-100">
-                <div>
-                    <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase mb-1">
-                        <Users className="w-3 h-3" /> Passengers
-                    </div>
-                    <div className="font-semibold text-slate-900">
-                        {passengers || 1} People
+                    {/* Dropoff */}
+                    <div className="relative flex gap-4">
+                        <div className="w-6 h-6 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center shrink-0 z-10 mt-1">
+                            <div className="w-2 h-2 bg-slate-400 rounded-full" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">
+                                Dropoff
+                            </div>
+                            <div className="font-bold text-slate-900 truncate">
+                                {dropoff || "Enter Dropoff Location"}
+                            </div>
+                            {isRoundTrip && tripData.return?.datetime && (
+                                <div className="text-sm text-blue-600 font-medium mt-3 flex items-center gap-1">
+                                    <span className="bg-blue-100 px-1.5 py-0.5 rounded text-[10px] font-black mr-1">
+                                        RETURN
+                                    </span>
+                                    {formatDisplayDate(
+                                        tripData.return.datetime,
+                                    )}
+                                </div>
+                            )}
+                            {isRoundTrip &&
+                                tripData.return?.stops?.length > 0 && (
+                                    <p className="text-[10px] text-slate-400 italic mt-1 font-medium">
+                                        + {tripData.return.stops.length} return
+                                        stops included
+                                    </p>
+                                )}
+                        </div>
                     </div>
                 </div>
-                <div>
-                    <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase mb-1">
-                        {isHourly ? (
-                            <Clock className="w-3 h-3" />
-                        ) : (
-                            <MapPin className="w-3 h-3" />
-                        )}
-                        {isHourly ? "Duration" : "Distance"}
+            )}
+
+            {hasTripData && (
+                <div className="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-slate-100">
+                    <div>
+                        <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase mb-1">
+                            <Users className="w-3 h-3" /> Passengers
+                        </div>
+                        <div className="font-semibold text-slate-900">
+                            {passengers || 1} People
+                        </div>
                     </div>
-                    <div className="font-semibold text-slate-900">
-                        {isHourly
-                            ? duration
-                                ? `${duration} Hours`
-                                : "Not set"
-                            : "Est. Total Trip"}
+                    <div>
+                        <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase mb-1">
+                            {isHourly ? (
+                                <Clock className="w-3 h-3" />
+                            ) : (
+                                <MapPin className="w-3 h-3" />
+                            )}
+                            {isHourly ? "Duration" : "Distance"}
+                        </div>
+                        <div className="font-semibold text-slate-900">
+                            {isHourly
+                                ? duration
+                                    ? `${duration} Hours`
+                                    : "Not set"
+                                : "Est. Total Trip"}
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Selected Vehicle Display */}
             {selectedVehicle && (
@@ -922,7 +1100,11 @@ const TripSummary = ({
                                 {selectedVehicle.name}
                             </div>
                             <div className="text-sm text-slate-600">
-                                {formatCurrency(selectedVehicle.price)}/trip
+                                {formatCurrency(
+                                    selectedVehicle.price,
+                                    selectedVehicle.currency,
+                                )}
+                                /trip
                             </div>
                         </div>
                         <CheckCircle2 className="w-5 h-5 text-blue-600" />
@@ -1014,54 +1196,117 @@ export default function SelectVehiclePage() {
     const [showContactModal, setShowContactModal] = useState(false);
     const [contactData, setContactData] = useState(null);
     const [tripDetails, setTripDetails] = useState(null);
+    const [vehicles, setVehicles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const router = useRouter();
 
     useEffect(() => {
-        // Load data from localStorage on mount
-        const savedStep1 = localStorage.getItem("bookingStep1");
-        if (savedStep1) {
+        async function fetchBuses() {
             try {
-                setTripDetails(JSON.parse(savedStep1));
-            } catch (e) {
-                console.error("Error parsing saved step 1 data:", e);
-            }
-        }
+                setLoading(true);
+                setError(null);
+                const response = await getAllBuses();
+                console.log("API Response:", response);
 
-        const savedVehicle = localStorage.getItem("selectedVehicle");
-        if (savedVehicle) {
-            try {
-                const vehicle = JSON.parse(savedVehicle);
-                setSelectedVehicleId(vehicle.id);
-            } catch (e) {
-                console.error("Error parsing saved vehicle:", e);
-            }
-        }
+                const buses = response?.data?.data ?? response?.data ?? [];
+                console.log("Buses data:", buses);
 
-        const savedContact = localStorage.getItem("bookingContact");
-        if (savedContact) {
-            try {
-                setContactData(JSON.parse(savedContact));
-            } catch (e) {
-                console.error("Error parsing saved contact:", e);
+                if (!Array.isArray(buses)) {
+                    throw new Error("Invalid data format received");
+                }
+
+                if (buses.length === 0) {
+                    setVehicles([]);
+                    setLoading(false);
+                    return;
+                }
+
+                const mappedBuses = buses.map((bus) => {
+                    const inclusionsList = (bus.inclusions || [])
+                        .map((i) => i.title)
+                        .filter(Boolean);
+                    const exclusionsList = (bus.exclusions || [])
+                        .map((i) => i.title)
+                        .filter(Boolean);
+                    const currency = bus.pricing?.currency || "USD";
+
+                    return {
+                        id: bus._id?.toString() || bus.id,
+                        name: bus.name || "Charter Bus",
+                        price: bus.pricing?.price || 0,
+                        originalPrice: bus.pricing?.originalPrice || 0,
+                        discount: bus.pricing?.discountPercent || 0,
+                        passengers: bus.seatCapacity || 0,
+                        luggage: bus.luggageCapacity || 0,
+                        image:
+                            bus.image || "https://via.placeholder.com/400x300",
+                        amenities: (bus.features || []).map((f) => f.name),
+                        badge: bus.isMostPopular
+                            ? "Most Popular"
+                            : bus.isPremium
+                              ? "Premium"
+                              : null,
+                        category:
+                            bus.category === "Mini Bus"
+                                ? "small"
+                                : bus.category === "Luxury Coach" ||
+                                    bus.category === "Volvo Bus"
+                                  ? "large"
+                                  : "medium",
+                        inclusions:
+                            inclusionsList.length > 0
+                                ? inclusionsList
+                                : [
+                                      "Driver Allowance",
+                                      "GST (5%)",
+                                      "State Tax & Toll",
+                                  ],
+                        exclusions:
+                            exclusionsList.length > 0
+                                ? exclusionsList
+                                : [
+                                      "Parking charges",
+                                      "Night charges (10 PM - 6 AM)",
+                                  ],
+                        extraKmRate: bus.distancePolicy?.extraKmPrice || 0,
+                        includedKms: bus.distancePolicy?.includedKm || 0,
+                        taxes: bus.pricing?.extraCharges || 0,
+                        currency: currency,
+                        billingCycle: bus.pricing?.billingCycle,
+                    };
+                });
+
+                setVehicles(mappedBuses);
+            } catch (err) {
+                console.error("Error fetching buses:", err);
+                setError(err.message || "Failed to load buses");
+                setVehicles([]);
+            } finally {
+                setLoading(false);
             }
         }
+        fetchBuses();
     }, []);
 
-    const filteredVehicles =
-        activeFilter === "all"
-            ? VEHICLES
-            : VEHICLES.filter((v) => v.category === activeFilter);
+    const filteredVehicles = Array.isArray(vehicles)
+        ? activeFilter === "all"
+            ? vehicles
+            : vehicles.filter((v) => v.category === activeFilter)
+        : [];
 
     const selectedVehicle = selectedVehicleId
-        ? VEHICLES.find((v) => v.id === selectedVehicleId)
+        ? vehicles?.find((v) => v.id === selectedVehicleId)
         : null;
 
     const handleVehicleSelect = (vehicleId) => {
         setSelectedVehicleId(vehicleId);
         setShowError(false);
 
-        const vehicle = VEHICLES.find((v) => v.id === vehicleId);
-        localStorage.setItem("selectedVehicle", JSON.stringify(vehicle));
+        const vehicle = vehicles?.find((v) => v.id === vehicleId);
+        if (vehicle) {
+            localStorage.setItem("selectedVehicle", JSON.stringify(vehicle));
+        }
 
         // Reset contact data when vehicle changes
         if (selectedVehicleId !== vehicleId) {
@@ -1127,10 +1372,6 @@ export default function SelectVehiclePage() {
                             <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">
                                 Select Your Vehicle
                             </h1>
-                            <p className="text-slate-500">
-                                Step 2 of 4: Choose the perfect charter bus for
-                                your journey.
-                            </p>
                         </div>
 
                         {/* Error Banner */}
@@ -1183,30 +1424,65 @@ export default function SelectVehiclePage() {
                             ))}
                         </div>
 
-                        {/* Vehicle List (VehicleListing Style) */}
-                        <div className="space-y-4">
-                            {filteredVehicles.map((vehicle) => (
-                                <VehicleCard
-                                    key={vehicle.id}
-                                    vehicle={vehicle}
-                                    isSelected={
-                                        selectedVehicleId === vehicle.id
-                                    }
-                                    onSelect={handleVehicleSelect}
-                                />
-                            ))}
-                        </div>
-
-                        {filteredVehicles.length === 0 && (
+                        {/* Vehicle List */}
+                        {loading ? (
+                            <div className="space-y-4">
+                                {[1, 2, 3].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="bg-white rounded-2xl border border-slate-200 p-6 animate-pulse"
+                                    >
+                                        <div className="flex gap-6">
+                                            <div className="w-48 h-32 bg-slate-200 rounded-xl" />
+                                            <div className="flex-1 space-y-3">
+                                                <div className="h-6 bg-slate-200 rounded w-1/3" />
+                                                <div className="h-4 bg-slate-100 rounded w-1/4" />
+                                                <div className="h-4 bg-slate-100 rounded w-1/2" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : error ? (
+                            <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-red-300">
+                                <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                                    Error Loading Buses
+                                </h3>
+                                <p className="text-slate-500 max-w-md mx-auto mb-4">
+                                    {error}
+                                </p>
+                                <button
+                                    onClick={() => window.location.reload()}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    Try Again
+                                </button>
+                            </div>
+                        ) : filteredVehicles.length === 0 ? (
                             <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
                                 <Bus className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                                <h3 className="text-lg font-bold text-slate-900">
-                                    No vehicles found
+                                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                                    No buses available
                                 </h3>
-                                <p className="text-slate-500">
-                                    Try adjusting your filters to see more
-                                    options.
+                                <p className="text-slate-500 max-w-md mx-auto">
+                                    There are currently no buses available for
+                                    this category. Please check back later or
+                                    contact support.
                                 </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {filteredVehicles.map((vehicle, idx) => (
+                                    <VehicleCard
+                                        key={`${vehicle.id}-${idx}`}
+                                        vehicle={vehicle}
+                                        isSelected={
+                                            selectedVehicleId === vehicle.id
+                                        }
+                                        onSelect={handleVehicleSelect}
+                                    />
+                                ))}
                             </div>
                         )}
 

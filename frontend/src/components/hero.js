@@ -49,7 +49,7 @@ const Hero = () => {
     };
 
   return (
-      <section className="relative min-h-screen w-full flex items-center overflow-hidden pt-32 pb-20">
+      <section id="home" className="relative min-h-screen w-full flex items-center overflow-hidden pt-32 pb-20">
           {/* Background */}
           <div className="absolute inset-0 [clip-path:inset(0)] -z-10">
               <div className="fixed inset-0">
@@ -105,7 +105,7 @@ const Hero = () => {
                           )}
                       </button>
 
-                      <button className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/30 px-8 py-4 rounded-full font-bold text-lg transition-all">
+                      <button onClick={() => router.push("#buses")} className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/30 px-8 py-4 rounded-full font-bold text-lg transition-all">
                           View Buses
                       </button>
                   </div>

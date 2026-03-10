@@ -5,7 +5,7 @@ import { BUS_FEATURES } from "../components/mockdata";
 
 const BusFeatures = () => {
   return (
-    <section id="features" className="py-24 bg-white relative z-10">
+    <section id="amenities" className="py-24 bg-white relative z-10">
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
         <motion.div 
           initial={{ opacity: 0, x: -50 }}

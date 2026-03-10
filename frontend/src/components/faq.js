@@ -10,7 +10,7 @@ const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(0);
 
   return (
-    <section className="py-24 bg-slate-50">
+    <section id="faq" className="py-24 bg-slate-50">
       <div className="max-w-3xl mx-auto px-6">
         <h2 className="text-4xl font-bold mb-12 text-center">Frequently Asked Questions</h2>
         <div className="space-y-4">

@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const CTASection = () => {
   const [isInView, setIsInView] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -20,7 +22,7 @@ const CTASection = () => {
   }, []);
 
   return (
-    <section className={`py-24 relative overflow-hidden cta-section ${isInView ? "in-view" : ""}`}>
+    <section  className={`py-24 relative overflow-hidden cta-section ${isInView ? "in-view" : ""}`}>
       <div className="fixed inset-0 -z-10 cta-bg">
         <div className="absolute inset-0 bg-slate-900/85" />
         <img
@@ -35,7 +37,7 @@ const CTASection = () => {
         <p className="text-white/60 text-xl mb-12 max-w-2xl mx-auto">
           Join 50,000+ happy travelers who trust PrimeDrive for their group transportation needs.
         </p>
-        <button className="bg-orange-500 hover:bg-orange-600 text-white px-12 py-5 rounded-full font-bold text-xl transition-all shadow-2xl hover:shadow-orange-500/40">
+        <button onClick={ () => router.push("/#home") } className="bg-orange-500 hover:bg-orange-600 text-white px-12 py-5 rounded-full font-bold text-xl transition-all shadow-2xl hover:shadow-orange-500/40">
           Get Instant Quote
         </button>
       </div>

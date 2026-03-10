@@ -57,15 +57,13 @@ import {
     Bus,
     BusFront,
     Bed,
-    
+    XIcon,
 } from "lucide-react";
-import { createBus, uploadImage } from "@/services/busservices";
+import { createBusWithHandler, updateBusWithHandler, uploadImage } from "@/services/busservices";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CURRENCIES = [
-    { code: "USD", symbol: "$", label: "US Dollar" },
-];
+const CURRENCIES = [{ code: "USD", symbol: "$", label: "US Dollar" }];
 
 const INITIAL_FORM = {
     name: "",
@@ -212,21 +210,83 @@ function SectionHeader({ icon: Icon, title, subtitle, gradient }) {
     );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Build initial form state from existing bus data ─────────────────────────
+function buildInitialForm(initialData) {
+    if (!initialData) return INITIAL_FORM;
+    return {
+        name: initialData.name ?? "",
+        image: initialData.image ?? "",
+        category: initialData.category ?? "",
+        seatCapacity: initialData.seatCapacity ?? "",
+        isMostPopular: initialData.isMostPopular ?? false,
+        isElectric: initialData.isElectric ?? false,
+        isPremium: initialData.isPremium ?? false,
+        licensePlate: initialData.licensePlate ?? "",
+        fuelType: initialData.fuelType ?? "Petrol",
+        luggageCapacity: initialData.luggageCapacity ?? "",
+        description: initialData.description ?? "",
+        pricing: {
+            price: initialData.pricing?.price ?? "",
+            originalPrice: initialData.pricing?.originalPrice ?? "",
+            discountPercent: initialData.pricing?.discountPercent ?? "",
+            extraCharges: initialData.pricing?.extraCharges ?? "0",
+            totalPrice: initialData.pricing?.totalPrice ?? "",
+            currency: initialData.pricing?.currency ?? "USD",
+            billingCycle: initialData.pricing?.billingCycle ?? "per_day",
+        },
+        distancePolicy: {
+            includedKm: initialData.distancePolicy?.includedKm ?? "",
+            extraKmPrice: initialData.distancePolicy?.extraKmPrice ?? "",
+        },
+        driverAllowanceIncluded: initialData.driverAllowanceIncluded ?? true,
+        nightChargesApplicable: initialData.nightChargesApplicable ?? false,
+        nightChargesStartTime: initialData.nightChargesStartTime ?? "22:00",
+        nightChargesExtra: initialData.nightChargesExtra ?? "",
+        features: initialData.features ?? [],
+        inclusions: initialData.inclusions ?? [],
+        exclusions: initialData.exclusions ?? [],
+        addOns: initialData.addOns ?? [],
+        additionalInfo: initialData.additionalInfo ?? [],
+        policies: initialData.policies ?? [],
+    };
+}
 
-export default function AddVehicle() {
+
+
+export default function BusForm({
+    onSuccess,
+    initialData = null,
+    vehicleId = null,
+}) {
+    const isEditMode = !!vehicleId;
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeTab, setActiveTab] = useState("basic");
     const [errors, setErrors] = useState({});
     const [showSuccess, setShowSuccess] = useState(false);
-    const [imagePreview, setImagePreview] = useState(null);
+    const [imagePreview, setImagePreview] = useState(
+        initialData?.image ?? null,
+    );
     const [isDragging, setIsDragging] = useState(false);
     const [completedTabs, setCompletedTabs] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef(null);
 
-    const [formData, setFormData] = useState(INITIAL_FORM);
+    const [formData, setFormData] = useState(() =>
+        buildInitialForm(initialData),
+    );
     const [inputs, setInputs] = useState(INITIAL_INPUTS);
+
+    // ── Re-hydrate if initialData changes (e.g. modal re-opens for different bus) ──
+    useEffect(() => {
+        if (initialData) {
+            setFormData(buildInitialForm(initialData));
+            setImagePreview(initialData.image ?? null);
+            setActiveTab("basic");
+            setCompletedTabs([]);
+            setErrors({});
+        }
+    }, [initialData?._id ?? initialData?.id]);
 
     const currencySymbol = getCurrencySymbol(formData.pricing.currency);
 
@@ -441,26 +501,38 @@ export default function AddVehicle() {
                 pricing: ["price", "originalPrice"],
                 policy: ["includedKm", "extraKmPrice"],
             };
+            const errs = errors;
             const firstTab = tabs.find((t) =>
-                (errorTabMap[t.id] || []).some((k) => errors[k]),
+                (errorTabMap[t.id] || []).some((k) => errs[k]),
             );
             if (firstTab) setActiveTab(firstTab.id);
             return;
         }
+
         setIsSubmitting(true);
         try {
-            await createBus(formData);
-            setShowSuccess(true);
-            setTimeout(() => {
-                setShowSuccess(false);
-                setFormData(INITIAL_FORM);
-                setImagePreview(null);
-                setCompletedTabs([]);
-                setActiveTab("basic");
-            }, 3000);
+            if (isEditMode) {
+                await updateBusWithHandler(vehicleId, formData);
+                setShowSuccess(true);
+                setTimeout(() => {
+                    setShowSuccess(false);
+                    onSuccess?.();
+                }, 1500);
+            } else {
+                await createBusWithHandler(formData);
+                setShowSuccess(true);
+                setTimeout(() => {
+                    setShowSuccess(false);
+                    setFormData(INITIAL_FORM);
+                    setImagePreview(null);
+                    setCompletedTabs([]);
+                    setActiveTab("basic");
+                    onSuccess?.();
+                }, 1500);
+            }
         } catch (err) {
             setErrors({
-                submit: "Failed to create vehicle. Please try again.",
+                submit: `Failed to ${isEditMode ? "update" : "create"} vehicle. Please try again.`,
             });
         } finally {
             setIsSubmitting(false);
@@ -469,6 +541,9 @@ export default function AddVehicle() {
 
     const isTabCompleted = (id) => completedTabs.includes(id);
     const currentTabIdx = tabs.findIndex((t) => t.id === activeTab);
+    const [showInclusionInput, setShowInclusionInput] = useState(false);
+    const [showExclusionInput, setShowExclusionInput] = useState(false);
+    const [distanceUnit, setDistanceUnit] = useState("km");
 
     // ─────────────────────────────────────────────────────────────────────────
     return (
@@ -477,17 +552,28 @@ export default function AddVehicle() {
                 {/* ── Header ── */}
                 <div className="mb-8 text-center">
                     <div className="inline-flex items-center justify-center p-3 bg-white rounded-2xl shadow-lg mb-4">
-                        <div className="bg-gradient-to-br from-blue-600 to-purple-600 p-3 rounded-xl mr-3">
+                        <div
+                            className={`bg-gradient-to-br ${isEditMode ? "from-amber-500 to-orange-500" : "from-blue-600 to-purple-600"} p-3 rounded-xl mr-3`}
+                        >
                             <Car className="w-8 h-8 text-white" />
                         </div>
                         <div className="text-left">
                             <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
-                                Add New Vehicle
+                                {isEditMode
+                                    ? "Edit Vehicle"
+                                    : "Add New Vehicle"}
                             </h1>
+                            {isEditMode && (
+                                <p className="text-sm text-amber-600 font-medium mt-0.5">
+                                    Editing: {initialData?.name}
+                                </p>
+                            )}
                         </div>
                     </div>
                     <p className="text-slate-600 max-w-2xl mx-auto">
-                        Complete all steps to add a vehicle to your fleet.{" "}
+                        {isEditMode
+                            ? "Update the vehicle details below."
+                            : "Complete all steps to add a vehicle to your fleet."}{" "}
                         <span className="text-red-500">*</span> fields are
                         required.
                     </p>
@@ -501,10 +587,14 @@ export default function AddVehicle() {
                         </div>
                         <div className="flex-1">
                             <h3 className="font-bold text-green-800">
-                                Vehicle Created!
+                                {isEditMode
+                                    ? "Vehicle Updated!"
+                                    : "Vehicle Created!"}
                             </h3>
                             <p className="text-green-700 text-sm">
-                                Your vehicle is now live in the fleet.
+                                {isEditMode
+                                    ? "Changes have been saved."
+                                    : "Your vehicle is now live in the fleet."}
                             </p>
                         </div>
                         <button
@@ -535,7 +625,7 @@ export default function AddVehicle() {
                                 width: `${(currentTabIdx / (tabs.length - 1)) * 100}%`,
                             }}
                         />
-                        {tabs.map((tab, index) => {
+                        {tabs.map((tab) => {
                             const Icon = tab.icon;
                             const isActive = activeTab === tab.id;
                             const isCompleted = isTabCompleted(tab.id);
@@ -546,16 +636,7 @@ export default function AddVehicle() {
                                     className={`relative flex flex-col items-center gap-2 ${isActive ? "scale-110" : "hover:scale-105"} transition-all duration-300`}
                                 >
                                     <div
-                                        className={`
-                                        w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-300
-                                        ${
-                                            isActive
-                                                ? "bg-gradient-to-br from-blue-600 to-purple-600 text-white ring-4 ring-blue-100"
-                                                : isCompleted
-                                                  ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white"
-                                                  : "bg-white text-slate-400 border-2 border-slate-200"
-                                        }
-                                    `}
+                                        className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${isActive ? "bg-gradient-to-br from-blue-600 to-purple-600 text-white ring-4 ring-blue-100" : isCompleted ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white" : "bg-white text-slate-400 border-2 border-slate-200"}`}
                                     >
                                         {isCompleted && !isActive ? (
                                             <CheckCircle2 className="w-6 h-6" />
@@ -590,7 +671,6 @@ export default function AddVehicle() {
                                         subtitle="Core details about the vehicle"
                                         gradient="from-blue-500 to-blue-600"
                                     />
-
                                     <div className="grid md:grid-cols-2 gap-6">
                                         {/* Vehicle Name */}
                                         <div className="md:col-span-2 space-y-1">
@@ -666,7 +746,7 @@ export default function AddVehicle() {
                                             <FieldError msg={errors.category} />
                                         </div>
 
-                                        {/* Right column: Seat + CabType */}
+                                        {/* Seat Capacity */}
                                         <div className="space-y-4">
                                             <div className="space-y-1">
                                                 <label className="text-sm font-bold text-slate-700">
@@ -794,7 +874,7 @@ export default function AddVehicle() {
                                             <FieldError msg={errors.image} />
                                         </div>
 
-                                        {/* Toggles: Most Popular / Electric / Premium */}
+                                        {/* Toggles */}
                                         <div className="md:col-span-2 grid md:grid-cols-3 gap-3">
                                             {[
                                                 {
@@ -869,9 +949,7 @@ export default function AddVehicle() {
                                         subtitle="Technical details and vehicle identifiers"
                                         gradient="from-slate-500 to-slate-700"
                                     />
-
                                     <div className="grid md:grid-cols-2 gap-6">
-                                        {/* License Plate */}
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 License Plate{" "}
@@ -891,8 +969,6 @@ export default function AddVehicle() {
                                                 msg={errors.licensePlate}
                                             />
                                         </div>
-
-                                        {/* Luggage Capacity */}
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Luggage Capacity
@@ -914,8 +990,6 @@ export default function AddVehicle() {
                                                 </span>
                                             </div>
                                         </div>
-
-                                        {/* Fuel Type */}
                                         <div className="space-y-2">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Fuel Type{" "}
@@ -956,8 +1030,6 @@ export default function AddVehicle() {
                                             </div>
                                             <FieldError msg={errors.fuelType} />
                                         </div>
-
-                                        {/* Description */}
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Description
@@ -986,9 +1058,7 @@ export default function AddVehicle() {
                                         subtitle="Set competitive pricing with auto-calculated discount"
                                         gradient="from-emerald-500 to-emerald-600"
                                     />
-
                                     <div className="grid md:grid-cols-2 gap-6">
-                                        {/* Currency */}
                                         <div className="md:col-span-2 space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Currency
@@ -1035,8 +1105,6 @@ export default function AddVehicle() {
                                                 })}
                                             </div>
                                         </div>
-
-                                        {/* Original Price */}
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Original Price{" "}
@@ -1064,8 +1132,6 @@ export default function AddVehicle() {
                                                 msg={errors.originalPrice}
                                             />
                                         </div>
-
-                                        {/* Selling Price */}
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Selling Price{" "}
@@ -1090,8 +1156,6 @@ export default function AddVehicle() {
                                             </div>
                                             <FieldError msg={errors.price} />
                                         </div>
-
-                                        {/* Extra Charges */}
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Extra Charges &amp; Taxes
@@ -1113,8 +1177,6 @@ export default function AddVehicle() {
                                                 />
                                             </div>
                                         </div>
-
-                                        {/* Billing Cycle */}
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Billing Cycle
@@ -1145,8 +1207,6 @@ export default function AddVehicle() {
                                                 </option>
                                             </select>
                                         </div>
-
-                                        {/* Discount chip */}
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Discount (auto-calculated)
@@ -1169,8 +1229,6 @@ export default function AddVehicle() {
                                                 )}
                                             </div>
                                         </div>
-
-                                        {/* Total Price Card */}
                                         <div className="md:col-span-2">
                                             <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
                                                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl" />
@@ -1233,9 +1291,7 @@ export default function AddVehicle() {
                                         subtitle="Distance limits, night charges, and rental policies"
                                         gradient="from-violet-500 to-purple-600"
                                     />
-
                                     <div className="grid md:grid-cols-2 gap-6">
-                                        {/* Included KM */}
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Included Kilometers{" "}
@@ -1263,8 +1319,6 @@ export default function AddVehicle() {
                                                 msg={errors.includedKm}
                                             />
                                         </div>
-
-                                        {/* Extra KM Price */}
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 Extra KM Price{" "}
@@ -1295,8 +1349,6 @@ export default function AddVehicle() {
                                                 msg={errors.extraKmPrice}
                                             />
                                         </div>
-
-                                        {/* Driver Allowance */}
                                         <div className="md:col-span-2">
                                             <label
                                                 className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.driverAllowanceIncluded ? "border-violet-400 bg-violet-50" : "border-slate-200 hover:border-violet-300"}`}
@@ -1325,8 +1377,6 @@ export default function AddVehicle() {
                                                 />
                                             </label>
                                         </div>
-
-                                        {/* Night Charges Toggle */}
                                         <div className="md:col-span-2 space-y-3">
                                             <label
                                                 className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.nightChargesApplicable ? "border-indigo-400 bg-indigo-50" : "border-slate-200 hover:border-indigo-300"}`}
@@ -1351,7 +1401,6 @@ export default function AddVehicle() {
                                                     </p>
                                                 </div>
                                             </label>
-
                                             {formData.nightChargesApplicable && (
                                                 <div className="grid md:grid-cols-2 gap-4 pl-2">
                                                     <div className="space-y-1">
@@ -1396,7 +1445,6 @@ export default function AddVehicle() {
                                                 </div>
                                             )}
                                         </div>
-
                                         {/* Policies */}
                                         <div className="md:col-span-2 space-y-3">
                                             <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
@@ -1500,7 +1548,7 @@ export default function AddVehicle() {
                                 <div className="p-8 space-y-8">
                                     <SectionHeader
                                         icon={Sparkles}
-                                        title="Features &amp; Amenities"
+                                        title="Features & Amenities"
                                         subtitle="Features, inclusions, exclusions, add-ons, and extra info"
                                         gradient="from-amber-500 to-orange-600"
                                     />
@@ -1541,7 +1589,6 @@ export default function AddVehicle() {
                                         </div>
                                     </div>
 
-                                    {/* Custom Features */}
                                     <ListSection
                                         title="Custom Features"
                                         icon={Check}
@@ -1572,182 +1619,507 @@ export default function AddVehicle() {
                                         }
                                     />
 
-                                    {/* Inclusions */}
-                                    <ListSection
-                                        title="Inclusions"
-                                        icon={CheckCircle2}
-                                        iconBg="bg-green-100"
-                                        iconColor="text-green-600"
-                                        inputValue={inputs.inclusion}
-                                        onInputChange={(v) =>
-                                            setInputs((p) => ({
-                                                ...p,
-                                                inclusion: v,
-                                            }))
-                                        }
-                                        onAdd={() =>
-                                            addItem("inclusions", {
-                                                title: inputs.inclusion,
-                                            })
-                                        }
-                                        placeholder="What's included in the price?"
-                                        btnColor="bg-green-600 hover:bg-green-700"
-                                        items={formData.inclusions}
-                                        renderItem={(i) => i.title}
-                                        onRemove={(i) =>
-                                            removeItem("inclusions", i)
-                                        }
-                                        chipStyle="bg-green-50 text-green-800 border-green-200"
-                                        chipIcon={
-                                            <Check className="w-3.5 h-3.5 text-green-500" />
-                                        }
-                                    />
+                                    {/* INCLUSIONS - 10 Common Options + Custom Add */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-green-100 rounded-lg">
+                                                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                            </div>
+                                            <h3 className="text-base font-bold text-slate-800">
+                                                Inclusions
+                                            </h3>
+                                        </div>
 
-                                    {/* Exclusions */}
-                                    <ListSection
-                                        title="Exclusions"
-                                        icon={X}
-                                        iconBg="bg-red-100"
-                                        iconColor="text-red-600"
-                                        inputValue={inputs.exclusion}
-                                        onInputChange={(v) =>
-                                            setInputs((p) => ({
-                                                ...p,
-                                                exclusion: v,
-                                            }))
-                                        }
-                                        onAdd={() =>
-                                            addItem("exclusions", {
-                                                title: inputs.exclusion,
-                                            })
-                                        }
-                                        placeholder="What's not included?"
-                                        btnColor="bg-red-600 hover:bg-red-700"
-                                        items={formData.exclusions}
-                                        renderItem={(e) => e.title}
-                                        onRemove={(i) =>
-                                            removeItem("exclusions", i)
-                                        }
-                                        chipStyle="bg-red-50 text-red-800 border-red-200"
-                                        chipIcon={
-                                            <AlertCircle className="w-3.5 h-3.5 text-red-400" />
-                                        }
-                                    />
+                                        {/* 10 Common Inclusion Options */}
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                            {[
+                                                "Fuel",
+                                                "Driver",
+                                                "GPS Navigation",
+                                                "Insurance",
+                                                "Roadside Assistance",
+                                                "Airport Pickup",
+                                                "Unlimited Mileage",
+                                                "Child Seat",
+                                                "WiFi Hotspot",
+                                                "Toll Pass",
+                                            ].map((item) => {
+                                                const isSelected =
+                                                    formData.inclusions.some(
+                                                        (inc) =>
+                                                            inc.title === item,
+                                                    );
+                                                return (
+                                                    <button
+                                                        key={item}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (isSelected) {
+                                                                const idx =
+                                                                    formData.inclusions.findIndex(
+                                                                        (inc) =>
+                                                                            inc.title ===
+                                                                            item,
+                                                                    );
+                                                                if (idx !== -1)
+                                                                    removeItem(
+                                                                        "inclusions",
+                                                                        idx,
+                                                                    );
+                                                            } else {
+                                                                addItem(
+                                                                    "inclusions",
+                                                                    {
+                                                                        title: item,
+                                                                    },
+                                                                );
+                                                            }
+                                                        }}
+                                                        className={`px-3 py-2 rounded-lg border-2 text-xs font-medium transition-all ${isSelected ? "bg-green-100 border-green-400 text-green-700" : "border-slate-200 hover:border-green-300 hover:bg-green-50 text-slate-600"}`}
+                                                    >
+                                                        {isSelected && (
+                                                            <Check className="w-3 h-3 inline mr-1" />
+                                                        )}
+                                                        {item}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Custom Add - Short button left, input toggles */}
+                                        <div className="flex gap-2 items-center">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowInclusionInput(
+                                                        !showInclusionInput,
+                                                    )
+                                                }
+                                                className={`whitespace-nowrap px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-1.5 ${showInclusionInput ? "bg-slate-200 text-slate-700 hover:bg-slate-300" : " text-blue"}`}
+                                            >
+                                                {showInclusionInput ? (
+                                                    <>
+                                                        <X className="w-4 h-4" />{" "}
+                                                        Cancel
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Plus className="w-4 h-4" />{" "}
+                                                        Custom Add
+                                                    </>
+                                                )}
+                                            </button>
+
+                                            {showInclusionInput && (
+                                                <>
+                                                    <input
+                                                        value={inputs.inclusion}
+                                                        onChange={(v) =>
+                                                            setInputs((p) => ({
+                                                                ...p,
+                                                                inclusion:
+                                                                    v.target
+                                                                        .value,
+                                                            }))
+                                                        }
+                                                        placeholder="Type custom inclusion..."
+                                                        className="flex-1 px-3 py-2 rounded-lg border-2 border-slate-200 focus:border-green-500 focus:outline-none text-sm transition-all"
+                                                        autoFocus
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (
+                                                                inputs.inclusion.trim()
+                                                            ) {
+                                                                addItem(
+                                                                    "inclusions",
+                                                                    {
+                                                                        title: inputs.inclusion,
+                                                                    },
+                                                                );
+                                                                setInputs(
+                                                                    (p) => ({
+                                                                        ...p,
+                                                                        inclusion:
+                                                                            "",
+                                                                    }),
+                                                                );
+                                                                setShowInclusionInput(
+                                                                    false,
+                                                                );
+                                                            }
+                                                        }}
+                                                        disabled={
+                                                            !inputs.inclusion.trim()
+                                                        }
+                                                        className="bg-green-600 hover:bg-green-700 disabled:bg-slate-300 text-white px-4 py-2 rounded-lg font-semibold transition-all"
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Selected Inclusions Display */}
+                                        {formData.inclusions.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 pt-2">
+                                                {formData.inclusions.map(
+                                                    (inc, i) => (
+                                                        <span
+                                                            key={i}
+                                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-green-50 text-green-800 border border-green-200 text-sm font-medium"
+                                                        >
+                                                            <Check className="w-3.5 h-3.5 text-green-500" />
+                                                            {inc.title}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeItem(
+                                                                        "inclusions",
+                                                                        i,
+                                                                    )
+                                                                }
+                                                                className="ml-1 hover:bg-green-200 rounded-full p-0.5"
+                                                            >
+                                                                <X className="w-3 h-3 text-green-700" />
+                                                            </button>
+                                                        </span>
+                                                    ),
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* EXCLUSIONS - 10 Common Options + Custom Add */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-red-100 rounded-lg">
+                                                <XIcon className="w-4 h-4 text-red-600" />
+                                            </div>
+                                            <h3 className="text-base font-bold text-slate-800">
+                                                Exclusions
+                                            </h3>
+                                        </div>
+
+                                        {/* 10 Common Exclusion Options */}
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                            {[
+                                                "Fuel",
+                                                "Driver",
+                                                "Insurance",
+                                                "Parking Fees",
+                                                "Tolls",
+                                                "Traffic Fines",
+                                                "Cleaning Fee",
+                                                "Late Return Fee",
+                                                "Additional Driver",
+                                                "Cross-Border Fee",
+                                            ].map((item) => {
+                                                const isSelected =
+                                                    formData.exclusions.some(
+                                                        (exc) =>
+                                                            exc.title === item,
+                                                    );
+                                                return (
+                                                    <button
+                                                        key={item}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (isSelected) {
+                                                                const idx =
+                                                                    formData.exclusions.findIndex(
+                                                                        (exc) =>
+                                                                            exc.title ===
+                                                                            item,
+                                                                    );
+                                                                if (idx !== -1)
+                                                                    removeItem(
+                                                                        "exclusions",
+                                                                        idx,
+                                                                    );
+                                                            } else {
+                                                                addItem(
+                                                                    "exclusions",
+                                                                    {
+                                                                        title: item,
+                                                                    },
+                                                                );
+                                                            }
+                                                        }}
+                                                        className={`px-3 py-2 rounded-lg border-2 text-xs font-medium transition-all ${isSelected ? "bg-red-100 border-red-400 text-red-700" : "border-slate-200 hover:border-red-300 hover:bg-red-50 text-slate-600"}`}
+                                                    >
+                                                        {isSelected && (
+                                                            <Check className="w-3 h-3 inline mr-1" />
+                                                        )}
+                                                        {item}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Custom Add - Short button left, input toggles */}
+                                        <div className="flex gap-2 items-center">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowExclusionInput(
+                                                        !showExclusionInput,
+                                                    )
+                                                }
+                                                className={`whitespace-nowrap px-4 py-2 rounded-lg font-semibold text-sm transition-all flex items-center gap-1.5 ${showExclusionInput ? "bg-slate-200 text-slate-700 hover:bg-slate-300" : " text-blue"}`}
+                                            >
+                                                {showExclusionInput ? (
+                                                    <>
+                                                        <X className="w-4 h-4" />{" "}
+                                                        Cancel
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Plus className="w-4 h-4" />{" "}
+                                                        Custom Add
+                                                    </>
+                                                )}
+                                            </button>
+
+                                            {showExclusionInput && (
+                                                <>
+                                                    <input
+                                                        value={inputs.exclusion}
+                                                        onChange={(v) =>
+                                                            setInputs((p) => ({
+                                                                ...p,
+                                                                exclusion:
+                                                                    v.target
+                                                                        .value,
+                                                            }))
+                                                        }
+                                                        placeholder="Type custom exclusion..."
+                                                        className="flex-1 px-3 py-2 rounded-lg border-2 border-slate-200 focus:border-red-500 focus:outline-none text-sm transition-all"
+                                                        autoFocus
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (
+                                                                inputs.exclusion.trim()
+                                                            ) {
+                                                                addItem(
+                                                                    "exclusions",
+                                                                    {
+                                                                        title: inputs.exclusion,
+                                                                    },
+                                                                );
+                                                                setInputs(
+                                                                    (p) => ({
+                                                                        ...p,
+                                                                        exclusion:
+                                                                            "",
+                                                                    }),
+                                                                );
+                                                                setShowExclusionInput(
+                                                                    false,
+                                                                );
+                                                            }
+                                                        }}
+                                                        disabled={
+                                                            !inputs.exclusion.trim()
+                                                        }
+                                                        className="bg-red-600 hover:bg-red-700 disabled:bg-slate-300 text-white px-4 py-2 rounded-lg font-semibold transition-all"
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Selected Exclusions Display */}
+                                        {formData.exclusions.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 pt-2">
+                                                {formData.exclusions.map(
+                                                    (exc, i) => (
+                                                        <span
+                                                            key={i}
+                                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-red-50 text-red-800 border border-red-200 text-sm font-medium"
+                                                        >
+                                                            <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                                                            {exc.title}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeItem(
+                                                                        "exclusions",
+                                                                        i,
+                                                                    )
+                                                                }
+                                                                className="ml-1 hover:bg-red-200 rounded-full p-0.5"
+                                                            >
+                                                                <X className="w-3 h-3 text-red-700" />
+                                                            </button>
+                                                        </span>
+                                                    ),
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
 
                                     {/* Add-ons */}
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
                                         <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
                                             <div className="p-2 bg-purple-100 rounded-lg">
                                                 <Plus className="w-4 h-4 text-purple-600" />
                                             </div>
                                             Paid Add-ons
                                         </h3>
-                                        <div className="grid md:grid-cols-3 gap-3">
-                                            <input
-                                                value={inputs.addOn.title}
-                                                onChange={(e) =>
-                                                    setInputs((p) => ({
-                                                        ...p,
-                                                        addOn: {
-                                                            ...p.addOn,
-                                                            title: e.target
-                                                                .value,
-                                                        },
-                                                    }))
-                                                }
-                                                placeholder="Add-on name"
-                                                className="px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:outline-none text-sm transition-all"
-                                            />
-                                            <div className="relative">
-                                                <span className="absolute left-4 top-3.5 text-slate-500 font-bold">
-                                                    {currencySymbol}
-                                                </span>
+
+                                        {/* Input Row */}
+                                        <div className="flex gap-2 items-end">
+                                            <div className="flex-1">
+                                                <label className="block text-xs font-medium text-slate-600 mb-1">
+                                                    Name
+                                                </label>
                                                 <input
-                                                    type="number"
-                                                    value={inputs.addOn.price}
+                                                    value={inputs.addOn.title}
                                                     onChange={(e) =>
                                                         setInputs((p) => ({
                                                             ...p,
                                                             addOn: {
                                                                 ...p.addOn,
-                                                                price: e.target
+                                                                title: e.target
                                                                     .value,
                                                             },
                                                         }))
                                                     }
-                                                    placeholder="Price"
-                                                    className="w-full !pl-10 pr-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:outline-none text-sm transition-all"
+                                                    placeholder="e.g. Extra Driver"
+                                                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-purple-500 focus:outline-none text-sm"
                                                 />
                                             </div>
-                                            <label className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-slate-200 cursor-pointer hover:border-purple-300 text-sm font-medium text-slate-600">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={
-                                                        inputs.addOn.isOptional
-                                                    }
-                                                    onChange={(e) =>
+                                            <div className="w-28">
+                                                <label className="block text-xs font-medium text-slate-600 mb-1">
+                                                    Price
+                                                </label>
+                                                <div className="relative">
+                                                    <span className="absolute  left-3 top-2 text-slate-500 text-lg">
+                                                        {currencySymbol}
+                                                    </span>
+                                                    <input
+                                                        type="number"
+                                                        value={
+                                                            inputs.addOn.price
+                                                        }
+                                                        onChange={(e) =>
+                                                            setInputs((p) => ({
+                                                                ...p,
+                                                                addOn: {
+                                                                    ...p.addOn,
+                                                                    price: e
+                                                                        .target
+                                                                        .value,
+                                                                },
+                                                            }))
+                                                        }
+                                                        placeholder="0"
+                                                        className="w-full !pl-12 pr-3 py-2 rounded-lg border border-slate-300 focus:border-purple-500 focus:outline-none text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={
+                                                            inputs.addOn
+                                                                .isOptional
+                                                        }
+                                                        onChange={(e) =>
+                                                            setInputs((p) => ({
+                                                                ...p,
+                                                                addOn: {
+                                                                    ...p.addOn,
+                                                                    isOptional:
+                                                                        e.target
+                                                                            .checked,
+                                                                },
+                                                            }))
+                                                        }
+                                                        className="w-4 h-4 text-purple-600 rounded border-slate-300"
+                                                    />
+                                                    Optional
+                                                </label>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (
+                                                        inputs.addOn.title.trim() &&
+                                                        inputs.addOn.price
+                                                    ) {
+                                                        addItem(
+                                                            "addOns",
+                                                            inputs.addOn,
+                                                        );
                                                         setInputs((p) => ({
                                                             ...p,
                                                             addOn: {
-                                                                ...p.addOn,
-                                                                isOptional:
-                                                                    e.target
-                                                                        .checked,
+                                                                title: "",
+                                                                price: "",
+                                                                isOptional: true,
                                                             },
-                                                        }))
+                                                        }));
                                                     }
-                                                    className="w-4 h-4 text-purple-600 rounded"
-                                                />
-                                                Optional
-                                            </label>
+                                                }}
+                                                disabled={
+                                                    !inputs.addOn.title.trim() ||
+                                                    !inputs.addOn.price
+                                                }
+                                                className=" bg-purple-600 hover:bg-purple-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white px-4 py-4 rounded-lg font-medium text-sm transition-colors"
+                                            >
+                                                Add
+                                            </button>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                addItem("addOns", inputs.addOn)
-                                            }
-                                            className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-600/20"
-                                        >
-                                            <Plus className="w-5 h-5" /> Add
-                                            Add-on
-                                        </button>
-                                        <div className="space-y-2">
-                                            {formData.addOns.map((a, i) => (
-                                                <div
-                                                    key={i}
-                                                    className="flex justify-between items-center bg-purple-50 border border-purple-200 px-4 py-3 rounded-xl"
-                                                >
-                                                    <div>
-                                                        <span className="font-bold text-purple-900 text-sm">
-                                                            {a.title}
-                                                        </span>
-                                                        <span className="ml-2 text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">
-                                                            {a.isOptional
-                                                                ? "Optional"
-                                                                : "Required"}
-                                                        </span>
+
+                                        {/* List */}
+                                        {formData.addOns.length > 0 && (
+                                            <div className="border rounded-lg divide-y">
+                                                {formData.addOns.map((a, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className="flex justify-between items-center px-4 py-3"
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="font-medium text-slate-800 text-sm">
+                                                                {a.title}
+                                                            </span>
+                                                            <span
+                                                                className={`text-xs px-2 py-0.5 rounded-full ${a.isOptional ? "bg-slate-100 text-slate-600" : "bg-purple-100 text-purple-700"}`}
+                                                            >
+                                                                {a.isOptional
+                                                                    ? "Optional"
+                                                                    : "Required"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-4">
+                                                            <span className="font-medium text-slate-800 text-sm">
+                                                                {currencySymbol}
+                                                                {a.price}
+                                                            </span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeItem(
+                                                                        "addOns",
+                                                                        i,
+                                                                    )
+                                                                }
+                                                                className="text-slate-400 hover:text-red-600 transition-colors"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="font-bold text-purple-900">
-                                                            {currencySymbol}
-                                                            {a.price}
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                removeItem(
-                                                                    "addOns",
-                                                                    i,
-                                                                )
-                                                            }
-                                                            className="hover:bg-purple-200 rounded-full p-1.5"
-                                                        >
-                                                            <Trash2 className="w-4 h-4 text-purple-700" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Additional Info */}
@@ -1860,24 +2232,27 @@ export default function AddVehicle() {
                                         <button
                                             type="submit"
                                             disabled={isSubmitting}
-                                            className="w-full md:w-auto bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl hover:-translate-y-0.5"
+                                            className={`w-full md:w-auto text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl hover:shadow-2xl hover:-translate-y-0.5 bg-gradient-to-r ${isEditMode ? "from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600" : "from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700"}`}
                                         >
                                             {isSubmitting ? (
                                                 <>
                                                     <Loader2 className="w-5 h-5 animate-spin" />{" "}
-                                                    Creating…
+                                                    {isEditMode
+                                                        ? "Saving…"
+                                                        : "Creating…"}
                                                 </>
                                             ) : (
                                                 <>
                                                     <Save className="w-5 h-5" />{" "}
-                                                    Create Vehicle
+                                                    {isEditMode
+                                                        ? "Save Changes"
+                                                        : "Create Vehicle"}
                                                 </>
                                             )}
                                         </button>
                                     </div>
                                 </div>
                             )}
-
                             {/* ─── Nav Buttons ─── */}
                             {activeTab !== "features" && (
                                 <div className="px-8 pb-8 flex justify-between items-center border-t border-slate-100 pt-6">
@@ -1905,7 +2280,6 @@ export default function AddVehicle() {
                     {/* ══════════ SIDEBAR ══════════ */}
                     <div className="lg:col-span-1">
                         <div className="sticky top-8 space-y-6">
-                            {/* Live Preview */}
                             <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
                                 <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-4 flex items-center gap-2">
                                     <Eye className="w-5 h-5 text-white" />
@@ -1914,7 +2288,6 @@ export default function AddVehicle() {
                                     </h3>
                                 </div>
                                 <div className="p-5 space-y-4">
-                                    {/* Image */}
                                     <div className="relative aspect-video rounded-2xl overflow-hidden bg-slate-100">
                                         {imagePreview ? (
                                             <img
@@ -1947,8 +2320,6 @@ export default function AddVehicle() {
                                             </div>
                                         )}
                                     </div>
-
-                                    {/* Name / meta */}
                                     <div>
                                         <h4 className="font-bold text-slate-900">
                                             {formData.name || "Vehicle Name"}
@@ -1963,8 +2334,6 @@ export default function AddVehicle() {
                                                 {formData.seatCapacity || "-"}{" "}
                                                 seats
                                             </span>
-                                            <span>·</span>
-                                            <span>{formData.cabType}</span>
                                             {formData.fuelType && (
                                                 <>
                                                     <span>·</span>
@@ -1980,8 +2349,6 @@ export default function AddVehicle() {
                                             </span>
                                         )}
                                     </div>
-
-                                    {/* Price */}
                                     <div className="bg-slate-50 rounded-xl p-3">
                                         <div className="flex items-baseline gap-1.5">
                                             <span className="text-xl font-bold text-slate-900">
@@ -2020,18 +2387,47 @@ export default function AddVehicle() {
                                             </div>
                                         )}
                                     </div>
-
-                                    {/* Stats */}
                                     <div className="grid grid-cols-2 gap-2 text-xs">
+                                        {/* Distance - with km/miles toggle */}
                                         <div className="bg-blue-50 rounded-lg p-2.5 text-center">
+                                            <div className="flex items-center justify-center gap-1 mb-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setDistanceUnit("km")
+                                                    }
+                                                    className={`text-[10px] px-1.5 py-0.5 rounded ${distanceUnit === "km" ? "bg-blue-600 text-white" : "bg-white text-blue-600"}`}
+                                                >
+                                                    km
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setDistanceUnit("miles")
+                                                    }
+                                                    className={`text-[10px] px-1.5 py-0.5 rounded ${distanceUnit === "miles" ? "bg-blue-600 text-white" : "bg-white text-blue-600"}`}
+                                                >
+                                                    miles
+                                                </button>
+                                            </div>
                                             <p className="text-blue-600 font-bold text-base">
-                                                {formData.distancePolicy
-                                                    .includedKm || "0"}
+                                                {distanceUnit === "km"
+                                                    ? formData.distancePolicy
+                                                          .includedKm || "0"
+                                                    : Math.round(
+                                                          (parseInt(
+                                                              formData
+                                                                  .distancePolicy
+                                                                  .includedKm,
+                                                          ) || 0) * 0.621371,
+                                                      )}
                                             </p>
                                             <p className="text-blue-700">
-                                                km included
+                                                {distanceUnit} included
                                             </p>
                                         </div>
+
+                                        {/* Features count */}
                                         <div className="bg-purple-50 rounded-lg p-2.5 text-center">
                                             <p className="text-purple-600 font-bold text-base">
                                                 {formData.features.length}
@@ -2042,7 +2438,6 @@ export default function AddVehicle() {
                                         </div>
                                     </div>
 
-                                    {/* Feature chips */}
                                     {formData.features.length > 0 && (
                                         <div className="flex flex-wrap gap-1">
                                             {formData.features
@@ -2065,8 +2460,6 @@ export default function AddVehicle() {
                                             )}
                                         </div>
                                     )}
-
-                                    {/* Status */}
                                     <div className="space-y-1.5 pt-3 border-t border-slate-100 text-xs">
                                         <div className="flex justify-between">
                                             <span className="text-slate-500">
@@ -2115,7 +2508,6 @@ export default function AddVehicle() {
                                 </div>
                             </div>
 
-                            {/* Completion Status */}
                             <div className="bg-white rounded-2xl shadow-lg border border-slate-100 p-5">
                                 <h4 className="font-bold text-slate-800 mb-3 text-sm">
                                     Completion Status
@@ -2163,7 +2555,6 @@ export default function AddVehicle() {
 }
 
 // ─── Reusable list section ────────────────────────────────────────────────────
-
 function ListSection({
     title,
     icon: Icon,
