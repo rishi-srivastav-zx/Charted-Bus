@@ -23,6 +23,8 @@ import { InventoryView } from "@/components/superadmindashboard/inventory";
 import { ApprovalsView } from "@/components/superadmindashboard/approvals";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { Sidebar } from "@/components/superadmindashboard/sidebar";
+import LandingPages from "@/components/superadmindashboard/landing-page";
+import LeadPage from "@/components/superadmindashboard/leadpage";
 
 export default function DashboardPage() {
     const searchParams = useSearchParams();
@@ -57,8 +59,8 @@ export default function DashboardPage() {
             operators: "Operator Management",
             inventory: "Vehicle Inventory",
             approvals: "Approval Queue",
-            routes: "Route Settings",
-            bookings: "Booking Logs",
+            Landingpage: "Landingpage",
+            Leads: "Leads",
             reports: "Performance Reports",
             settings: "Global Settings",
         }[view] || "Management Portal";
@@ -158,8 +160,9 @@ export default function DashboardPage() {
                             {view === "operators" && <OperatorsView />}
                             {view === "inventory" && <InventoryView />}
                             {view === "approvals" && <ApprovalsView />}
+                            {view === "Landingpage" && <LandingPages />}
+                            {view === "Leads" && <LeadPage/>}
                             {[
-                                "routes",
                                 "bookings",
                                 "reports",
                                 "settings",

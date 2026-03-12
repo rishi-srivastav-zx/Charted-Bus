@@ -42,6 +42,7 @@ import {
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { getAllBuses } from "@/services/busservices";
+import { saveVehicleSelection, saveContactDetails, getBooking } from "@/services/bookingservice";
 
 // Utility for tailwind class merging
 function cn(...inputs) {
@@ -790,7 +791,7 @@ const ContactFormModal = ({ isOpen, onClose, onSubmit, initialData }) => {
                             type="submit"
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
                         >
-                            Continue to Checkout
+                            Continue to Next Step
                             <ArrowRight className="w-4 h-4" />
                         </button>
                         <button
@@ -833,9 +834,11 @@ const formatDisplayDate = (dateStr) => {
 const TripSummary = ({
     tripDetails: propTripDetails,
     selectedVehicle,
+    bookingVehicleData,
     onContinue,
     showError,
     contactData,
+    isSaving,
 }) => {
     const router = useRouter();
     const [showStops, setShowStops] = useState(false);
@@ -1084,12 +1087,12 @@ const TripSummary = ({
             )}
 
             {/* Selected Vehicle Display */}
-            {selectedVehicle && (
+            {(selectedVehicle || bookingVehicleData) && (
                 <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
                     <div className="flex items-center gap-3">
                         <img
-                            src={selectedVehicle.image}
-                            alt={selectedVehicle.name}
+                            src={selectedVehicle?.image || bookingVehicleData?.image}
+                            alt={selectedVehicle?.name || bookingVehicleData?.name}
                             className="w-16 h-16 rounded-lg object-cover"
                         />
                         <div className="flex-1">
@@ -1097,12 +1100,12 @@ const TripSummary = ({
                                 Selected Vehicle
                             </div>
                             <div className="font-bold text-slate-900">
-                                {selectedVehicle.name}
+                                {selectedVehicle?.name || bookingVehicleData?.name}
                             </div>
                             <div className="text-sm text-slate-600">
                                 {formatCurrency(
-                                    selectedVehicle.price,
-                                    selectedVehicle.currency,
+                                    selectedVehicle?.price || bookingVehicleData?.price || 0,
+                                    selectedVehicle?.currency || bookingVehicleData?.currency || "USD",
                                 )}
                                 /trip
                             </div>
@@ -1149,16 +1152,30 @@ const TripSummary = ({
             {/* Continue Button */}
             <button
                 onClick={onContinue}
+                disabled={!selectedVehicle || isSaving}
                 className={cn(
-                    "w-full mt-6 py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2",
+                    "w-full mt-6 py-3.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-70",
                     selectedVehicle
                         ? "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200"
                         : "bg-slate-200 text-slate-400 cursor-not-allowed",
                 )}
-                disabled={!selectedVehicle}
             >
-                {contactData ? "Proceed to Payment" : "Continue to Checkout"}
-                <ArrowRight className="w-4 h-4" />
+                {isSaving ? (
+                    <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Saving...
+                    </>
+                ) : contactData ? (
+                    <>
+                        Proceed to Next Step
+                        <ArrowRight className="w-4 h-4" />
+                    </>
+                ) : (
+                    <>
+                        Continue to Next Step
+                        <ArrowRight className="w-4 h-4" />
+                    </>
+                )}
             </button>
 
             <button
@@ -1199,13 +1216,93 @@ export default function SelectVehiclePage() {
     const [vehicles, setVehicles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [bookingVehicleData, setBookingVehicleData] = useState(null);
     const router = useRouter();
 
+    // Get bookingId from localStorage or props
+    const [bookingId, setBookingId] = useState(() => {
+        if (typeof window !== "undefined") {
+            return localStorage.getItem("bookingId");
+        }
+        return null;
+    });
+
     useEffect(() => {
-        async function fetchBuses() {
+        async function fetchData() {
             try {
                 setLoading(true);
                 setError(null);
+
+                // Fetch booking details if bookingId exists
+                const currentBookingId = localStorage.getItem("bookingId");
+                if (currentBookingId) {
+                    setBookingId(currentBookingId);
+                    try {
+                        const bookingResponse = await getBooking(currentBookingId);
+                        const booking = bookingResponse.data?.booking;
+                        if (booking) {
+                            // Format booking data for trip summary
+                            const formattedBooking = {
+                                tripType: booking.tripType,
+                                formData: {
+                                    pickupAddress: booking.pickupAddress,
+                                    dropoffAddress: booking.dropoffAddress,
+                                    datetime: booking.datetime,
+                                    passengers: booking.passengers,
+                                    duration: booking.duration,
+                                    orderType: booking.orderType,
+                                    stops: booking.stops,
+                                    outbound: booking.tripType === "round-trip" ? {
+                                        pickupAddress: booking.pickupAddress,
+                                        dropoffAddress: booking.dropoffAddress,
+                                        datetime: booking.datetime,
+                                        passengers: booking.passengers,
+                                        stops: booking.stops,
+                                    } : null,
+                                    return: booking.tripType === "round-trip" ? {
+                                        pickupAddress: booking.returnPickupAddress,
+                                        dropoffAddress: booking.returnDropoffAddress,
+                                        datetime: booking.returnDate,
+                                        stops: booking.returnStops,
+                                    } : null,
+                                },
+                                timestamp: booking.createdAt,
+                            };
+                            setTripDetails(formattedBooking);
+                            
+                            // Also load contact data if available
+                            if (booking.contact) {
+                                setContactData(booking.contact);
+                            }
+                            
+                            // Also set selected vehicle if available
+                            if (booking.busId) {
+                                setSelectedVehicleId(booking.busId);
+                            }
+                            
+                            // Set vehicle data from booking if available
+                            if (booking.busDetails) {
+                                setBookingVehicleData(booking.busDetails);
+                            }
+                        }
+                    } catch (bookingErr) {
+                        console.error("Error fetching booking:", bookingErr);
+                        // Fall back to localStorage
+                        const storedBooking = localStorage.getItem("bookingStep1");
+                        if (storedBooking) {
+                            setTripDetails(JSON.parse(storedBooking));
+                        }
+                    }
+                } else {
+                    // Fall back to localStorage
+                    const storedBooking = localStorage.getItem("bookingStep1");
+                    if (storedBooking) {
+                        setTripDetails(JSON.parse(storedBooking));
+                    }
+                }
+
+                // Fetch buses
                 const response = await getAllBuses();
                 console.log("API Response:", response);
 
@@ -1279,14 +1376,14 @@ export default function SelectVehiclePage() {
 
                 setVehicles(mappedBuses);
             } catch (err) {
-                console.error("Error fetching buses:", err);
-                setError(err.message || "Failed to load buses");
+                console.error("Error fetching data:", err);
+                setError(err.message || "Failed to load data");
                 setVehicles([]);
             } finally {
                 setLoading(false);
             }
         }
-        fetchBuses();
+        fetchData();
     }, []);
 
     const filteredVehicles = Array.isArray(vehicles)
@@ -1299,18 +1396,44 @@ export default function SelectVehiclePage() {
         ? vehicles?.find((v) => v.id === selectedVehicleId)
         : null;
 
-    const handleVehicleSelect = (vehicleId) => {
+    const handleVehicleSelect = async (vehicleId) => {
         setSelectedVehicleId(vehicleId);
         setShowError(false);
 
         const vehicle = vehicles?.find((v) => v.id === vehicleId);
         if (vehicle) {
             localStorage.setItem("selectedVehicle", JSON.stringify(vehicle));
+
+            // Get latest bookingId from localStorage
+            const currentBookingId = localStorage.getItem("bookingId");
+            
+            // Save vehicle selection to backend if we have a bookingId
+            if (currentBookingId) {
+                try {
+                    await saveVehicleSelection({
+                        bookingId: currentBookingId,
+                        busId: vehicleId,
+                        busDetails: {
+                            name: vehicle.name,
+                            image: vehicle.image,
+                            price: vehicle.price,
+                            taxes: vehicle.taxes,
+                            passengers: vehicle.passengers,
+                            amenities: vehicle.amenities,
+                            inclusions: vehicle.inclusions,
+                            exclusions: vehicle.exclusions,
+                        },
+                    });
+                } catch (error) {
+                    console.error("Error saving vehicle selection:", error);
+                }
+            }
         }
 
         // Reset contact data when vehicle changes
         if (selectedVehicleId !== vehicleId) {
             setContactData(null);
+            localStorage.removeItem("bookingContact");
         }
     };
 
@@ -1331,9 +1454,49 @@ export default function SelectVehiclePage() {
         handleFinalProceed();
     };
 
-    const handleContactSubmit = (data) => {
+    const handleContactSubmit = async (data) => {
         setContactData(data);
         localStorage.setItem("bookingContact", JSON.stringify(data));
+
+        // Get bookingId from localStorage - ensure it exists
+        let currentBookingId = localStorage.getItem("bookingId");
+        
+        // If no bookingId, create one by saving basic details first
+        if (!currentBookingId) {
+            // Get saved trip data from localStorage
+            const savedStep1 = localStorage.getItem("bookingStep1");
+            if (savedStep1) {
+                try {
+                    const step1Data = JSON.parse(savedStep1);
+                    // Import and save basic details
+                    const { saveBasicDetails } = await import("@/services/bookingservice");
+                    const response = await saveBasicDetails({
+                        tripType: step1Data.tripType,
+                        ...step1Data.formData,
+                    });
+                    if (response.data?.bookingId) {
+                        currentBookingId = response.data.bookingId;
+                        localStorage.setItem("bookingId", currentBookingId);
+                        setBookingId(currentBookingId);
+                    }
+                } catch (err) {
+                    console.error("Error creating booking:", err);
+                }
+            }
+        }
+
+        // Save contact to backend
+        if (currentBookingId) {
+            try {
+                await saveContactDetails({
+                    bookingId: currentBookingId,
+                    contact: data,
+                });
+                console.log("Contact saved to backend successfully");
+            } catch (error) {
+                console.error("Error saving contact to backend:", error);
+            }
+        }
 
         // Auto proceed after contact form submission
         setTimeout(() => {
@@ -1341,21 +1504,49 @@ export default function SelectVehiclePage() {
         }, 500);
     };
 
-    const handleFinalProceed = () => {
+    const handleFinalProceed = async () => {
         if (!selectedVehicleId || !contactData) {
             return;
         }
 
-        // Store complete booking data
-        const bookingData = {
-            vehicle: selectedVehicle,
-            contact: contactData,
-            timestamp: new Date().toISOString(),
-        };
-        localStorage.setItem("bookingStep2", JSON.stringify(bookingData));
+        setIsSaving(true);
 
-        // Navigate to confirmation page
-        router.push("/bookingform/vechileselect/confirmation");
+        // Get latest bookingId from localStorage (in case it changed)
+        const currentBookingId = localStorage.getItem("bookingId") || bookingId;
+
+        try {
+            // Save contact details to backend
+            if (currentBookingId) {
+                await saveContactDetails({
+                    bookingId: currentBookingId,
+                    contact: contactData,
+                });
+            }
+
+            // Store complete booking data locally as fallback/display
+            const bookingData = {
+                vehicle: selectedVehicle,
+                contact: contactData,
+                timestamp: new Date().toISOString(),
+                bookingId: currentBookingId || bookingId,
+            };
+            localStorage.setItem("bookingStep2", JSON.stringify(bookingData));
+
+            // Navigate to confirmation page
+            router.push("/bookingform/vechileselect/confirmation");
+        } catch (error) {
+            console.error("Error saving contact details:", error);
+            // Still proceed even if API fails
+            const bookingData = {
+                vehicle: selectedVehicle,
+                contact: contactData,
+                timestamp: new Date().toISOString(),
+            };
+            localStorage.setItem("bookingStep2", JSON.stringify(bookingData));
+            router.push("/bookingform/vechileselect/confirmation");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -1399,7 +1590,7 @@ export default function SelectVehiclePage() {
                                         Contact Information Required
                                     </p>
                                     <p className="text-sm text-blue-600">
-                                        Please click "Continue to Checkout" and
+                                        Please click to "Continue" and
                                         provide your contact details to proceed.
                                     </p>
                                 </div>
@@ -1499,8 +1690,8 @@ export default function SelectVehiclePage() {
                                 disabled={!selectedVehicleId}
                             >
                                 {contactData
-                                    ? "Proceed to Payment"
-                                    : "Continue to Checkout"}
+                                    ? "Proceed to Next Step"
+                                    : "Continue to Next Step"}
                                 <ArrowRight className="w-4 h-4" />
                             </button>
                             {showError && !selectedVehicleId && (
@@ -1516,9 +1707,11 @@ export default function SelectVehiclePage() {
                         <TripSummary
                             tripDetails={tripDetails}
                             selectedVehicle={selectedVehicle}
+                            bookingVehicleData={bookingVehicleData}
                             onContinue={handleContinueClick}
                             showError={showError}
                             contactData={contactData}
+                            isSaving={isSaving}
                         />
                     </div>
                 </div>

@@ -42,8 +42,8 @@ export const Sidebar = ({ currentView, setCurrentView }) => {
         },
         { id: "operators", label: "Operators", icon: Users, color: "violet" },
         { id: "inventory", label: "Inventory", icon: Bus, color: "amber" },
-        { id: "routes", label: "Routes", icon: MapPin, color: "emerald" },
-        { id: "bookings", label: "Bookings", icon: BookOpen, color: "pink" },
+        { id: "Landingpage", label: "Landing Page", icon: MapPin, color: "emerald" },
+        { id: "Leads", label: "Leads", icon: BookOpen, color: "pink" },
         { id: "reports", label: "Reports", icon: BarChart3, color: "cyan" },
         {
             id: "approvals",

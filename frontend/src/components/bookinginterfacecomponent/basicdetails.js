@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNav } from "../navigation-provider";
 import { searchLocation } from "@/services/locationService";
+import { saveBasicDetails } from "@/services/bookingservice";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Icon = ({
@@ -1262,7 +1263,10 @@ const BookingForm = () => {
     const [tripType, setTripType] = useState("hourly");
     const [errors, setErrors] = useState([]);
     const [touched, setTouched] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const { navigate } = useNav();
+
+    const [bookingId, setBookingId] = useState(null);
 
     // Form data state for each trip type
     const [hourlyData, setHourlyData] = useState({});
@@ -1285,6 +1289,12 @@ const BookingForm = () => {
                 console.error("Error parsing saved booking data:", e);
             }
         }
+
+        // Load existing bookingId from localStorage
+        const savedBookingId = localStorage.getItem("bookingId");
+        if (savedBookingId) {
+            setBookingId(savedBookingId);
+        }
     }, []);
 
     const getCurrentFormData = () => {
@@ -1306,7 +1316,7 @@ const BookingForm = () => {
         setTouched(false);
     };
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         setTouched(true);
         const currentData = getCurrentFormData();
         const validationErrors = validateForm(tripType, currentData);
@@ -1320,14 +1330,79 @@ const BookingForm = () => {
             }
         } else {
             setErrors([]);
-            // Store form data in session/local storage or context before navigating
-            const bookingData = {
-                tripType,
-                formData: currentData,
-                timestamp: new Date().toISOString(),
-            };
-            localStorage.setItem("bookingStep1", JSON.stringify(bookingData));
-            navigate("/bookingform/vechileselect");
+            setIsLoading(true);
+
+            try {
+                // Prepare data based on trip type
+                let apiData = {
+                    tripType,
+                    orderType: currentData.orderType || currentData.bookingType,
+                    pickupAddress: currentData.pickupAddress,
+                    pickupType: currentData.pickupType || "address",
+                    dropoffAddress: currentData.dropoffAddress,
+                    dropoffType: currentData.dropoffType || "address",
+                    stops: currentData.stops || [],
+                    datetime: currentData.datetime ? new Date(currentData.datetime).toISOString() : null,
+                    passengers: currentData.passengers,
+                    duration: currentData.duration ? parseFloat(currentData.duration) : null,
+                };
+
+                if (tripType === "round-trip") {
+                    apiData = {
+                        tripType,
+                        orderType: currentData.orderType,
+                        pickupAddress: currentData.outbound?.pickupAddress,
+                        pickupType: currentData.outbound?.pickupType || "address",
+                        dropoffAddress: currentData.outbound?.dropoffAddress,
+                        dropoffType: currentData.outbound?.dropoffType || "address",
+                        stops: currentData.outbound?.stops || [],
+                        datetime: currentData.outbound?.datetime ? new Date(currentData.outbound.datetime).toISOString() : null,
+                        passengers: currentData.outbound?.passengers,
+                        returnDate: currentData.return?.datetime ? new Date(currentData.return.datetime).toISOString() : null,
+                        returnStops: currentData.return?.stops || [],
+                        returnPickupAddress: currentData.return?.pickupAddress,
+                        returnDropoffAddress: currentData.return?.dropoffAddress,
+                    };
+                }
+
+                // Add existing bookingId if available
+                if (bookingId) {
+                    apiData.bookingId = bookingId;
+                }
+
+                // Save to backend
+                const response = await saveBasicDetails(apiData);
+                const result = response.data;
+
+                if (result?.bookingId) {
+                    setBookingId(result.bookingId);
+                    localStorage.setItem("bookingId", result.bookingId);
+                }
+
+                // Store form data in localStorage for display in summary
+                const bookingData = {
+                    tripType,
+                    formData: currentData,
+                    timestamp: new Date().toISOString(),
+                    bookingId: result?.bookingId || bookingId,
+                };
+                localStorage.setItem("bookingStep1", JSON.stringify(bookingData));
+
+                navigate("/bookingform/vechileselect");
+            } catch (error) {
+                console.error("Error saving booking details:", error);
+                // Still allow navigation to next step even if API fails
+                // but save locally for now
+                const bookingData = {
+                    tripType,
+                    formData: currentData,
+                    timestamp: new Date().toISOString(),
+                };
+                localStorage.setItem("bookingStep1", JSON.stringify(bookingData));
+                navigate("/bookingform/vechileselect");
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 
@@ -1425,12 +1500,22 @@ const BookingForm = () => {
             <div className="px-5 py-4 bg-white border-t border-slate-100">
                 <button
                     onClick={handleContinue}
-                    className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-black py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20 group tracking-wide"
+                    disabled={isLoading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed text-white font-black py-3.5 rounded-2xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-500/20 group tracking-wide"
                 >
-                    Continue to Fleet Selection
-                    <span className="group-hover:translate-x-1 transition-transform inline-flex">
-                        <ArrowRight s={14} />
-                    </span>
+                    {isLoading ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Saving...
+                        </>
+                    ) : (
+                        <>
+                            Continue to Fleet Selection
+                            <span className="group-hover:translate-x-1 transition-transform inline-flex">
+                                <ArrowRight s={14} />
+                            </span>
+                        </>
+                    )}
                 </button>
                 <div className="flex items-center justify-center gap-1.5 mt-3">
                     <div className="flex text-amber-400">
@@ -1480,7 +1565,7 @@ export default function LuxCharterPage() {
                                 Book Your
                                 <br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">
-                                    Charter Bus {country ? `in ${country}` : ""}
+                                    Charter Bus
                                 </span>
                             </h1>
                             <p className="mt-5 text-[17px] text-slate-500 leading-relaxed max-w-md">

@@ -6,6 +6,8 @@ import authRoutes from "./routes/authroutes.js";
 import userRoutes from "./routes/userroutes.js";
 import busRoutes from "./routes/busroutes.js";
 import uploadRoutes from "./routes/uploads.js";
+import bookingRoutes from "./routes/bookingroutes.js";
+import charterBusRoutes from "./routes/seoroutes.js";   
 
 const app = express();
 
@@ -23,5 +25,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/buses", busRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/charter-bus", charterBusRoutes);  
 
 export default app;
