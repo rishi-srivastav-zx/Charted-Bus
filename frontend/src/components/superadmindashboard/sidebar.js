@@ -23,7 +23,7 @@ import { SidebarItem } from "./sidebaritem";
 import { cn } from "@/app/lib/uitls";
 import { useAuth } from "@/services/useAuth.js";
 
-export const Sidebar = ({ currentView, setCurrentView }) => {
+export const Sidebar = ({ currentView, onNavigate, isMobileOpen, onMobileClose }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const { logout, isLoading } = useAuth();
 
@@ -42,8 +42,8 @@ export const Sidebar = ({ currentView, setCurrentView }) => {
         },
         { id: "operators", label: "Operators", icon: Users, color: "violet" },
         { id: "inventory", label: "Inventory", icon: Bus, color: "amber" },
-        { id: "Landingpage", label: "Landing Page", icon: MapPin, color: "emerald" },
-        { id: "Leads", label: "Leads", icon: BookOpen, color: "pink" },
+        { id: "pages", label: "Landing Page", icon: MapPin, color: "emerald" },
+        { id: "leads", label: "Leads", icon: BookOpen, color: "pink" },
         { id: "reports", label: "Reports", icon: BarChart3, color: "cyan" },
         {
             id: "approvals",
@@ -130,7 +130,7 @@ export const Sidebar = ({ currentView, setCurrentView }) => {
                         key={item.id}
                         {...item}
                         active={currentView === item.id}
-                        onClick={() => setCurrentView(item.id)}
+                        onClick={() => onNavigate(item.id)}
                         collapsed={isCollapsed}
                     />
                 ))}
@@ -156,7 +156,7 @@ export const Sidebar = ({ currentView, setCurrentView }) => {
                             key={item.id}
                             {...item}
                             active={currentView === item.id}
-                            onClick={() => setCurrentView(item.id)}
+                            onClick={() => onNavigate(item.id)}
                             collapsed={isCollapsed}
                         />
                     ))}

@@ -9,9 +9,11 @@ const apiClient = axios.create({
 
 // ── Request interceptor: attach access token ──────────────────────────────────
 apiClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem("accessToken");
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== "undefined") {
+        const token = localStorage.getItem("accessToken");
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
     }
     return config;
 });
@@ -52,13 +54,15 @@ apiClient.interceptors.response.use(
             originalRequest._retry = true;
             isRefreshing = true;
 
-            const refreshToken = localStorage.getItem("refreshToken");
+            const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
 
             if (!refreshToken) {
                 // No refresh token — clear storage and let the 401 propagate
-                localStorage.removeItem("accessToken");
-                localStorage.removeItem("refreshToken");
-                localStorage.removeItem("user");
+                if (typeof window !== "undefined") {
+                    localStorage.removeItem("accessToken");
+                    localStorage.removeItem("refreshToken");
+                    localStorage.removeItem("user");
+                }
                 isRefreshing = false;
                 return Promise.reject(error);
             }
@@ -71,9 +75,11 @@ apiClient.interceptors.response.use(
                 const newAccessToken = res.data?.data?.accessToken;
                 const newRefreshToken = res.data?.data?.refreshToken;
 
-                localStorage.setItem("accessToken", newAccessToken);
-                if (newRefreshToken) {
-                    localStorage.setItem("refreshToken", newRefreshToken);
+                if (typeof window !== "undefined") {
+                    localStorage.setItem("accessToken", newAccessToken);
+                    if (newRefreshToken) {
+                        localStorage.setItem("refreshToken", newRefreshToken);
+                    }
                 }
 
                 apiClient.defaults.headers.common["Authorization"] =
@@ -84,9 +90,11 @@ apiClient.interceptors.response.use(
                 return apiClient(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError, null);
-                localStorage.removeItem("accessToken");
-                localStorage.removeItem("refreshToken");
-                localStorage.removeItem("user");
+                if (typeof window !== "undefined") {
+                    localStorage.removeItem("accessToken");
+                    localStorage.removeItem("refreshToken");
+                    localStorage.removeItem("user");
+                }
                 return Promise.reject(refreshError);
             } finally {
                 isRefreshing = false;

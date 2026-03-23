@@ -9,9 +9,9 @@ const CharterBusPageSchema = new Schema(
         city: { type: String, required: true, trim: true },
 
         // ── Hero Section ───────────────────────────────────────────
-        hero: {
-            heading: { type: String, trim: true },
-            subtext: { type: String, trim: true },
+        main: {
+            title_line1: { type: String, trim: true },
+            description: { type: String, trim: true },
         },
 
         // ── SEO Section ─────────────────────────────────────────────
@@ -25,43 +25,92 @@ const CharterBusPageSchema = new Schema(
             og_image: { type: String, default: "", trim: true },
         },
 
-        // ── Guide Section ───────────────────────────────────────────
-        guide: {
-            heading: { type: String, trim: true },
-            subtext: { type: String, trim: true },
-            bodyHtml: { type: String },
-            tripTypes: [
+        // ══════════════════════════════════════════════════════════════
+        // ── Hero Section  (extended from editor)
+        // ══════════════════════════════════════════════════════════════
+        hero: {
+            heading: { type: String, default: "", trim: true }, // was: heading
+            subtext: { type: String, default: "", trim: true }, // was: subtext (kept for backward compat)
+            heroImage: { type: String, default: "", trim: true }, // NEW — banner image URL or base64
+            description: { type: String, default: "" }, // NEW — rich HTML description
+        },
+
+        // ══════════════════════════════════════════════════════════════
+        // ── Services Section  (NEW — from editor)
+        // ══════════════════════════════════════════════════════════════
+        services: {
+            heading: { type: String, default: "", trim: true },
+            subheading: { type: String, default: "", trim: true },
+            items: [
                 {
-                    title: { type: String, trim: true },
-                    desc: { type: String, trim: true },
+                    icon: { type: String, default: "", trim: true }, // emoji character
+                    title: { type: String, default: "", trim: true },
+                    description: { type: String, default: "", trim: true },
+                    link: { type: String, default: "", trim: true }, // optional CTA URL
                     _id: false,
                 },
             ],
         },
 
-        // ── Coverage Section ───────────────────────────────────────
+        // ══════════════════════════════════════════════════════════════
+        // ── Why Choose Us Section  (merged: old "guide" + editor "whyus")
+        // ══════════════════════════════════════════════════════════════
+        whyus: {
+            heading: { type: String, default: "", trim: true }, // was: guide.heading
+            subtext: { type: String, default: "", trim: true }, // was: guide.subtext  (kept for compat)
+            mainContent: { type: String, default: "" }, // rich HTML — was: guide.bodyHtml
+            reasons: [
+                {
+                    title: { type: String, default: "", trim: true }, // was: guide.tripTypes[].title
+                    body: { type: String, default: "", trim: true }, // was: guide.tripTypes[].desc
+                    _id: false,
+                },
+            ],
+        },
+
+        // ══════════════════════════════════════════════════════════════
+        // ── Coverage Section  (unchanged)
+        // ══════════════════════════════════════════════════════════════
         coverage: {
-            heading: { type: String, trim: true },
-            subtext: { type: String, trim: true },
+            heading: { type: String, default: "", trim: true },
+            subtext: { type: String, default: "", trim: true },
             callout: { type: String, default: "" },
             regions: [
                 {
-                    name: { type: String, trim: true },
+                    name: { type: String, default: "", trim: true },
                     cities: { type: [String], default: [] },
                     _id: false,
                 },
             ],
         },
 
-        // ── FAQ Section ─────────────────────────────────────────────
-        faq: {
-            tag: { type: String, trim: true },
-            heading: { type: String, trim: true },
-            subtext: { type: String, trim: true },
+        // ══════════════════════════════════════════════════════════════
+        // ── Testimonials Section  (NEW — from editor)
+        // ══════════════════════════════════════════════════════════════
+        testimonials: {
             items: [
                 {
-                    question: { type: String, trim: true },
-                    answer: { type: String, trim: true },
+                    name: { type: String, default: "", trim: true },
+                    role: { type: String, default: "", trim: true }, // job title / company
+                    text: { type: String, default: "", trim: true }, // review body
+                    rating: { type: Number, default: 5, min: 1, max: 5 },
+                    photo: { type: String, default: "", trim: true }, // image URL or base64
+                    _id: false,
+                },
+            ],
+        },
+
+        // ══════════════════════════════════════════════════════════════
+        // ── FAQ Section  (extended from editor)
+        // ══════════════════════════════════════════════════════════════
+        faq: {
+            tag: { type: String, default: "", trim: true }, // was: faq.tag (unchanged)
+            heading: { type: String, default: "", trim: true }, // was: faq.heading (unchanged)
+            subtext: { type: String, default: "", trim: true }, // was: faq.subtext (unchanged)
+            items: [
+                {
+                    question: { type: String, default: "", trim: true }, // was: question  |  editor uses "q"
+                    answer: { type: String, default: "", trim: true }, // was: answer    |  editor uses "a"
                     _id: false,
                 },
             ],
@@ -69,7 +118,7 @@ const CharterBusPageSchema = new Schema(
     },
     {
         timestamps: true,
-    }
+    },
 );
 
 const CharterBusPage = model("CharterBusPage", CharterBusPageSchema);

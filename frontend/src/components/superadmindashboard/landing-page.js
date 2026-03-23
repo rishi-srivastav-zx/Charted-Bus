@@ -16,10 +16,11 @@ import {
     Settings,
 } from "lucide-react";
 import CharterBusForm from "./landingpageform/mainform";
-import CharterBusEditor from "./seoeditor/edit";
+import LandingPageEditor from "./seoeditor/form";   
 import { createPortal } from "react-dom";
-import { createPage, getAllPages } from "@/services/landingpage";
+import { createPage, getAllPages, updatePage, deletePage, getPageById } from "@/services/landingpage";
 import toast from "react-hot-toast";
+import Link from "next/link";
 
 const PER_PAGE = 6;
 
@@ -51,6 +52,150 @@ const Modal = ({ mode, page, onClose, onSave, onSuccess }) => {
     const [formStep, setFormStep] = useState("main");
     const [mainData, setMainData] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    // For edit mode, initialize with page data
+    useEffect(() => {
+        let isMounted = true;
+        
+        const loadFullPage = async () => {
+            if (mode === "edit" && page) {
+                try {
+                    const fullPage = await getPageById(page._id || page.id);
+                    if (!isMounted) return;
+                    
+                    setMainData({
+                        // ── Basic Info ─────────────────────────────────────────
+                        slug: fullPage.slug || "",
+                        country: fullPage.country || "",
+                        city: fullPage.city || "",
+
+                        // ── Hero Section ───────────────────────────────────────
+                        hero: {
+                            heading:
+                                fullPage.hero?.heading ||
+                                fullPage.main?.title_line1 ||
+                                fullPage.main?.heading ||
+                                "",
+                            subtext:
+                                fullPage.hero?.subtext ||
+                                fullPage.main?.description ||
+                                fullPage.main?.subtext ||
+                                "",
+                            heroImage:
+                                fullPage.hero?.heroImage ||
+                                fullPage.hero?.image ||
+                                fullPage.main?.heroImage ||
+                                "",
+                            description: fullPage.hero?.description || "",
+                        },
+
+                        // ── SEO Section ──────────────────────────────────────
+                        seo: {
+                            meta_title: fullPage.seo?.meta_title || "",
+                            meta_description: fullPage.seo?.meta_description || "",
+                            focus_keyword: fullPage.seo?.focus_keyword || "",
+                            canonical_url: fullPage.seo?.canonical_url || "",
+                            og_title: fullPage.seo?.og_title || "",
+                            og_description: fullPage.seo?.og_description || "",
+                            og_image: fullPage.seo?.og_image || "",
+                        },
+
+                        // ── Services Section ─────────────────────────────────
+                        services: {
+                            heading: fullPage.services?.heading || "",
+                            subheading: fullPage.services?.subheading || "",
+                            items:
+                                fullPage.services?.items?.map((item) => ({
+                                    icon: item.icon || "",
+                                    title: item.title || "",
+                                    description: item.description || "",
+                                    link: item.link || "",
+                                })) || [],
+                        },
+
+                        // ── Why Choose Us Section ────────────────────────────
+                        whyus: {
+                            heading:
+                                fullPage.whyus?.heading ||
+                                fullPage.guide?.heading ||
+                                "",
+                            subtext:
+                                fullPage.whyus?.subtext ||
+                                fullPage.guide?.subtext ||
+                                "",
+                            mainContent:
+                                fullPage.whyus?.mainContent ||
+                                fullPage.guide?.bodyHtml ||
+                                "",
+                            reasons:
+                                fullPage.whyus?.reasons?.map((r) => ({
+                                    title: r.title || "",
+                                    body: r.body || "",
+                                })) ||
+                                fullPage.guide?.tripTypes?.map((t) => ({
+                                    title: t.title || "",
+                                    body: t.desc || t.body || "",
+                                })) ||
+                                [],
+                        },
+
+                        // ── Coverage Section ─────────────────────────────────
+                        coverage: {
+                            heading: fullPage.coverage?.heading || "",
+                            subtext: fullPage.coverage?.subtext || "",
+                            callout: fullPage.coverage?.callout || "",
+                            regions:
+                                fullPage.coverage?.regions?.map((r) => ({
+                                    name: r.name || "",
+                                    cities: r.cities || [],
+                                })) || [],
+                        },
+
+                        // ── Testimonials Section ─────────────────────────────
+                        testimonials: {
+                            items:
+                                fullPage.testimonials?.items?.map((t) => ({
+                                    name: t.name || "",
+                                    role: t.role || "",
+                                    text: t.text || "",
+                                    rating: t.rating || 5,
+                                    photo: t.photo || "",
+                                })) || [],
+                        },
+
+                        // ── FAQ Section ────────────────────────────────────
+                        faq: {
+                            tag: fullPage.faq?.tag || "",
+                            heading: fullPage.faq?.heading || "",
+                            subtext: fullPage.faq?.subtext || "",
+                            items:
+                                fullPage.faq?.items?.map((item) => ({
+                                    q: item.question || item.q || "",
+                                    a: item.answer || item.a || "",
+                                })) || [],
+                        },
+                        
+                        main: fullPage.main || { 
+                            title_line1: "", 
+                            description: "" 
+                        },
+                    });
+                    setFormStep("main");
+                } catch (err) {
+                    console.error("Failed to load full page details:", err);
+                    toast.error("Failed to load complete page details.");
+                    if (isMounted) onClose();
+                }
+            }
+        };
+
+        loadFullPage();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [mode, page, onClose]);
 
     useEffect(() => {
         const handleEscape = (e) => e.key === "Escape" && onClose();
@@ -60,23 +205,32 @@ const Modal = ({ mode, page, onClose, onSave, onSuccess }) => {
 
     // Step 1: CharterBusForm submits → move to SEO step
     const handleMainSave = (data) => {
-        setMainData(data);
+        setMainData(prev => ({ ...prev, ...data }));
         setFormStep("seo");
     };
 
     const handleSeoSave = async (seoData) => {
         try {
             setLoading(true);
+            setError(null);
             const finalData = { ...mainData, ...seoData };
-            await createPage(finalData);
+            
+            if (mode === "edit" && page?._id) {
+                // Update existing page
+                await updatePage(page._id, finalData);
+                toast.success("Page updated successfully!");
+            } else {
+                // Create new page
+                await createPage(finalData);
+                toast.success("Page created successfully!");
+            }
+            
             onClose();
             if (onSuccess) onSuccess();
-            toast.success("Page created successfully!");
-        } catch (error) {
-            toast.error(
-                error.response?.data?.message ||
-                    "Failed to create page. Please try again.",
-            );
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || err.message || "Failed to save page. Please try again.";
+            setError(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -124,20 +278,44 @@ const Modal = ({ mode, page, onClose, onSave, onSuccess }) => {
                     </button>
                 </div>
 
+                {/* Error Display */}
+                {error && (
+                    <div className="mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                        <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <X className="w-3 h-3 text-red-600" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-red-700 text-sm font-medium">Submission Failed</p>
+                            <p className="text-red-600 text-xs mt-0.5">{error}</p>
+                            <button
+                                onClick={() => setError(null)}
+                                className="text-xs text-red-500 hover:text-red-700 mt-2 underline"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Step 1: Main Form */}
-                {formStep === "main" && (
+                {formStep === "main" && (mode !== "edit" || mainData) && (
                     <CharterBusForm
-                        initialData={page}
+                        initialData={mainData || page || {}}
                         onSave={handleMainSave}
                     />
+                )}
+                
+                {formStep === "main" && mode === "edit" && !mainData && (
+                    <div className="p-8 text-center text-gray-500">Loading...</div>
                 )}
 
                 {/* Step 2: SEO Editor */}
                 {formStep === "seo" && (
                     <div>
-                        <CharterBusEditor
-                            initialData={page}
+                        <LandingPageEditor  
+                            initialData={mainData || page}
                             onSave={handleSeoSave}
+                            isLoading={loading}
                         />
                         {/* Back button */}
                         <div className="px-6 pb-6">
@@ -239,7 +417,7 @@ export default function LandingPages() {
 
     const filtered = useMemo(() => {
         return pages.filter((p) => {
-            const title = p.hero?.heading || p.country || p.city || "";
+            const title = p.main?.title_line1 || p.hero?.heading || p.country || p.city || "";
             const slug = p.slug || "";
             const matchSearch =
                 title.toLowerCase().includes(search.toLowerCase()) ||
@@ -298,33 +476,35 @@ export default function LandingPages() {
         }
     };
 
-    const handleEdit = (form) => {
-        setPages((p) =>
-            p.map((pg) =>
-                pg.id === form.id
-                    ? {
-                          ...pg,
-                          ...form,
-                          slug: form.slug.startsWith("/")
-                              ? form.slug
-                              : `/${form.slug}`,
-                          modified: new Date().toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "2-digit",
-                              year: "numeric",
-                          }),
-                      }
-                    : pg,
-            ),
-        );
+    const handleEdit = async (form) => {
+        try {
+            const pageId = form._id || form.id;
+            if (pageId) {
+                await updatePage(pageId, form);
+                toast.success("Page updated successfully!");
+                // Refresh the pages list
+                handleRefreshPages();
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to update page");
+        }
     };
 
-    const handleDelete = (id) => {
-        setPages((p) => p.filter((pg) => pg.id !== id));
-        setDeleteModal(null);
-        setMenuId(null);
-        if (paginated.length === 1 && currentPage > 1) {
-            setCurrentPage((c) => c - 1);
+    const handleDelete = async (pageItem) => {
+        try {
+            const pageId = pageItem._id || pageItem.id;
+            if (pageId) {
+                await deletePage(pageId);
+                toast.success("Page deleted successfully!");
+            }
+            setPages((p) => p.filter((pg) => (pg._id || pg.id) !== pageId));
+            setDeleteModal(null);
+            setMenuId(null);
+            if (paginated.length === 1 && currentPage > 1) {
+                setCurrentPage((c) => c - 1);
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to delete page");
         }
     };
 
@@ -397,7 +577,7 @@ export default function LandingPages() {
                                         setStatusFilter(e.target.value);
                                         setCurrentPage(1);
                                     }}
-                                    className="appearance-none pl-4 pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
+                                    className="appearance-none pl-4 !pr-10 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
                                 >
                                     <option value="All">All Statuses</option>
                                     <option value="Published">Published</option>
@@ -429,19 +609,19 @@ export default function LandingPages() {
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b border-gray-200 bg-gray-50/50">
-                                        <th className="text-left py-3.5 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <th className="text-left py-3.5 px-6 pl-14 text-s font-semibold text-gray-900 uppercase tracking-wider">
                                             Page
                                         </th>
-                                        <th className="text-left py-3.5 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <th className="text-left py-3.5 px-6 pl-14 text-s font-semibold text-gray-900 uppercase tracking-wider">
                                             URL
                                         </th>
-                                        <th className="text-left py-3.5 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <th className="text-left py-3.5 px-6  text-s font-semibold text-gray-900 uppercase tracking-wider">
                                             Status
                                         </th>
-                                        <th className="text-left py-3.5 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <th className="text-left py-3.5 px-6 text-s font-semibold text-gray-900 uppercase tracking-wider">
                                             Modified
                                         </th>
-                                        <th className="text-right py-3.5 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <th className="text-right py-3.5 px-6 text-s font-semibold text-gray-900 uppercase tracking-wider">
                                             Actions
                                         </th>
                                     </tr>
@@ -478,7 +658,7 @@ export default function LandingPages() {
                                         paginated.map((page) => {
                                             const pageId = page._id || page.id;
                                             const pageTitle =
-                                                page.hero?.heading ||
+                                                page.main?.title_line1 || page.hero?.heading ||
                                                 `${page.country} - ${page.city}` ||
                                                 "Untitled";
                                             const pageSubtitle =
@@ -495,10 +675,10 @@ export default function LandingPages() {
                                                     key={pageId}
                                                     className="hover:bg-gray-50/80 transition-colors group"
                                                 >
-                                                    <td className="py-4 px-6">
+                                                    <td className="py-4 px-6 pl-14">
                                                         <div className="flex items-center gap-4">
                                                             <div>
-                                                                <h3 className="font-semibold text-gray-900 text-sm">
+                                                                <h3 className="font-semibold text-gray-900 text-s">
                                                                     {pageTitle}
                                                                 </h3>
                                                                 <p className="text-xs text-gray-500 mt-0.5">
@@ -511,10 +691,13 @@ export default function LandingPages() {
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="py-4 px-6">
-                                                        <code className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                                                    <td className="py-4 px-6 pl-12">
+                                                        <Link
+                                                            href={`/bookingform/${pageSlug}`}
+                                                            className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded hover:bg-gray-200 transition-colors"
+                                                        >
                                                             {pageSlug}
-                                                        </code>
+                                                        </Link>
                                                     </td>
                                                     <td className="py-4 px-6">
                                                         <StatusBadge status="Published" />
@@ -567,7 +750,7 @@ export default function LandingPages() {
 
                                                                 {menuId ===
                                                                     pageId && (
-                                                                    <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl border border-gray-200 shadow-xl shadow-black/5 z-50 py-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                                                                    <div className="absolute  right-0 top-full mt-1 w-48 bg-white rounded-xl border border-gray-200 shadow-xl shadow-black/5 !z-99999 py-1 animate-in fade-in slide-in-from-top-1 duration-150">
                                                                         <button
                                                                             onClick={() => {
                                                                                 setModal(
@@ -712,13 +895,14 @@ export default function LandingPages() {
                     page={modal.page}
                     onClose={() => setModal(null)}
                     onSave={handleEdit}
+                    onSuccess={handleRefreshPages}
                 />
             )}
             {deleteModal && (
                 <DeleteConfirmModal
                     page={deleteModal}
                     onClose={() => setDeleteModal(null)}
-                    onConfirm={() => handleDelete(deleteModal.id)}
+                    onConfirm={() => handleDelete(deleteModal)}
                 />
             )}
         </div>

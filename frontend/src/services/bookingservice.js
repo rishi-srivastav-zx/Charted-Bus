@@ -31,3 +31,7 @@ export const cancelBooking = (bookingId) => {
 export const getAllBookings = (params) => {
     return apiClient.get("/bookings", { params });
 };
+
+export const deleteBooking = (id) => {
+    return apiClient.delete(`/bookings/${id}`);
+};

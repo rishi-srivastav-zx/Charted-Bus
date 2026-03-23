@@ -67,37 +67,59 @@ const SectionCard = ({
     </div>
 );
 
-const PriceBreakdown = ({ vehiclePrice = 0, pricing = null, isProcessing, onConfirm }) => {
-    // Use pricing from backend if available
-    const items = pricing
-        ? [
-              { label: "Base Fare", value: `$${pricing.baseFare?.toLocaleString() || 0}.00` },
-              { label: "Fuel Surcharge", value: `$${pricing.fuelSurcharge?.toFixed(2) || 0}` },
-              { label: "Driver Gratuity", value: `$${pricing.driverGratuity?.toFixed(2) || 0}` },
-              { label: "Service Fees", value: `$${pricing.serviceFees?.toFixed(2) || 0}` },
-          ]
-        : [
-              { label: "Base Fare", value: `$${vehiclePrice.toLocaleString()}.00` },
-              { label: "Fuel Surcharge", value: "$45.00" },
-              {
-                  label: "Driver Gratuity",
-                  value: `$${(vehiclePrice * 0.1).toFixed(2)}`,
-              },
-              { label: "Service Fees", value: "$12.50" },
-          ];
+const PriceBreakdown = ({ vehicle = {}, pricing = null, isProcessing, onConfirm, tripType = "one-way", passengers = 0, duration = 0 }) => {
+    // Use pricing from backend if available, otherwise calculate from vehicle
+    const baseFare = pricing?.baseFare || vehicle?.price || 0;
+    const fuelSurcharge = pricing?.fuelSurcharge || 45;
+    const driverGratuity = pricing?.driverGratuity || (baseFare * 0.1);
+    const serviceFees = pricing?.serviceFees || 12.5;
+    const taxes = pricing?.taxes || vehicle?.taxes || 0;
+    const currency = pricing?.currency || vehicle?.currency || "USD";
+    const billingCycle = vehicle?.billingCycle || "per trip";
+    const includedKms = vehicle?.includedKms || 0;
+    const extraKmRate = vehicle?.extraKmRate || 0;
+    
+    // Calculate total based on trip type
+    let total;
+    if (pricing?.totalAmount) {
+        total = pricing.totalAmount;
+    } else if (tripType === "hourly") {
+        // For hourly trips, calculate based on hours (duration)
+        total = baseFare * (duration || 1) + taxes + driverGratuity + serviceFees;
+    } else {
+        // For per-trip (one-way or round-trip)
+        total = baseFare + fuelSurcharge + taxes + driverGratuity + serviceFees;
+    }
+    // Double for round trip
+    if (tripType === "round-trip") {
+        total = total * 2;
+    }
 
-    const total = pricing?.totalAmount || (vehiclePrice + 45 + vehiclePrice * 0.1 + 12.5);
+    const items = [
+        { label: "Base Fare", value: `$${baseFare.toLocaleString()}`, sub: billingCycle },
+        { label: "Fuel Surcharge", value: `$${fuelSurcharge.toFixed(2)}`, sub: tripType !== "hourly" ? "Included" : null },
+        { label: "Taxes & Fees", value: `$${(taxes + serviceFees).toFixed(2)}`, sub: null },
+        { label: "Driver Gratuity", value: `$${driverGratuity.toFixed(2)}`, sub: "Optional" },
+    ];
 
     return (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm sticky top-28">
-            <h3 className="text-lg font-bold text-slate-900 mb-6">
+            <h3 className="text-lg font-bold text-slate-900 mb-2">
                 Price Details
             </h3>
+            {billingCycle && (
+                <p className="text-xs text-slate-400 mb-4">
+                    {tripType === "hourly" ? `$${baseFare}/hour • ${passengers} passengers` : `From $${baseFare.toLocaleString()} per trip`}
+                </p>
+            )}
 
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3 mb-6">
                 {items.map((item, idx) => (
                     <div key={idx} className="flex justify-between text-sm">
-                        <span className="text-slate-500">{item.label}</span>
+                        <div className="flex flex-col">
+                            <span className="text-slate-500">{item.label}</span>
+                            {item.sub && <span className="text-[10px] text-slate-400">{item.sub}</span>}
+                        </div>
                         <span className="text-slate-900 font-medium">
                             {item.value}
                         </span>
@@ -109,15 +131,14 @@ const PriceBreakdown = ({ vehiclePrice = 0, pricing = null, isProcessing, onConf
                 <div className="flex justify-between items-end">
                     <div>
                         <div className="text-xs text-slate-500 uppercase font-black tracking-wider mb-1">
-                            Total Estimate
+                            {tripType === "round-trip" ? "Round Trip Total" : "Total Estimate"}
                         </div>
                         <div className="text-[10px] text-slate-400 font-bold">
                             ALL TAXES INCLUDED
                         </div>
                     </div>
                     <div className="text-3xl font-black text-slate-900">
-                        $
-                        {total.toLocaleString(undefined, {
+                        ${total.toLocaleString(undefined, {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                         })}
@@ -678,10 +699,13 @@ export default function ReviewItineraryPage() {
                     {/* Right Column: Price & Actions */}
                     <div className="lg:col-span-4">
                         <PriceBreakdown
-                            vehiclePrice={vehiclePrice}
+                            vehicle={vehicle}
                             pricing={pricing}
                             isProcessing={isProcessing}
                             onConfirm={handleConfirm}
+                            tripType={tripType}
+                            passengers={tripData.passengers || 0}
+                            duration={tripData.duration || 0}
                         />
                     </div>
                 </div>

@@ -8,6 +8,7 @@ import {
     getBookingByConfirmation,
     cancelBooking,
     getAllBookings,
+    deleteBooking,
 } from "../controllers/bookingController.js";
 
 const router = express.Router();
@@ -20,5 +21,6 @@ router.get("/:bookingId", getBooking);
 router.get("/confirmation/:confirmationNumber", getBookingByConfirmation);
 router.patch("/:bookingId/cancel", cancelBooking);
 router.get("/", getAllBookings);
+router.delete("/:id", deleteBooking);
 
 export default router;

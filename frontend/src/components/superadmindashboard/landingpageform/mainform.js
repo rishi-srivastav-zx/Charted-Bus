@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { getCountries, getCities } from "@/services/countryapi";    
 
 const Label = ({ children, required }) => (
     <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
@@ -77,19 +78,29 @@ export default function CharterBusForm({ initialData, onSave }) {
     const generateSlug = (country, city) => {
         const co = slugify(country);
         const ci = slugify(city);
-        if (co && ci) return `${co}/${ci}/charter-bus`;
-        if (ci) return `${ci}/charter-bus`;
-        if (co) return `${co}/charter-bus`;
+        if (co && ci) return `${co}/${ci}`;
+        if (ci) return `${ci}`;
+        if (co) return `${co}`;
         return "";
     };
 
-    const [data, setData] = useState({
+    // Sync countryInput and cityInput with initialData when editing
+    useEffect(() => {
+        if (initialData?.country) {
+            setCountryInput(initialData.country);
+        }
+        if (initialData?.city) {
+            setCityInput(initialData.city);
+        }
+    }, [initialData]);
+
+    const [data, setData] = useState({ 
         slug: initialData?.slug || "",
         country: initialData?.country || "",
         city: initialData?.city || "",
-        hero: {
-            title_line1: initialData?.hero?.title_line1 || "",
-            description: initialData?.hero?.description || "",
+        main: {
+            title_line1: initialData?.main?.title_line1 || "",
+            description: initialData?.main?.description || "",
         },
         seo: {
             meta_title: initialData?.seo?.meta_title || "",
@@ -106,6 +117,30 @@ export default function CharterBusForm({ initialData, onSave }) {
     const [errors, setErrors] = useState({});
     const [tab, setTab] = useState("basic");
 
+    useEffect(() => {
+        setData({
+            slug: initialData?.slug || "",
+            country: initialData?.country || "",
+            city: initialData?.city || "",
+            main: {
+                title_line1: initialData?.main?.title_line1 || "",
+                description: initialData?.main?.description || "",
+            },
+            seo: {
+                meta_title: initialData?.seo?.meta_title || "",
+                meta_description: initialData?.seo?.meta_description || "",
+                canonical_url: initialData?.seo?.canonical_url || "",
+                focus_keyword: initialData?.seo?.focus_keyword || "",
+                og_title: initialData?.seo?.og_title || "",
+                og_description: initialData?.seo?.og_description || "",
+                og_image: initialData?.seo?.og_image || "",
+            },
+        });
+        setSlugEdited(!!initialData?.slug);
+        setErrors({});
+        setTab("basic");
+    }, [initialData]);
+
     const setBasic = (k, v) => {
         setData((d) => {
             const updated = { ...d, [k]: v };
@@ -120,9 +155,9 @@ export default function CharterBusForm({ initialData, onSave }) {
         clearErr(k);
         if (k === "slug") setSlugEdited(true);
     };
-    const setHero = (k, v) => {
-        setData((d) => ({ ...d, hero: { ...d.hero, [k]: v } }));
-        clearErr(`hero.${k}`);
+    const setMain = (k, v) => {
+        setData((d) => ({ ...d, main: { ...d.main, [k]: v } }));
+        clearErr(`main.${k}`);
     };
     const setSeo = (k, v) => {
         setData((d) => ({ ...d, seo: { ...d.seo, [k]: v } }));
@@ -144,10 +179,10 @@ export default function CharterBusForm({ initialData, onSave }) {
             e.slug = "Lowercase letters, numbers, hyphens and slashes only";
         if (!data.country.trim()) e.country = "Required";
         if (!data.city.trim()) e.city = "Required";
-        if (!data.hero.title_line1.trim()) e["hero.title_line1"] = "Required";
-        if (!data.hero.description.trim()) e["hero.description"] = "Required";
-        else if (data.hero.description.length > 300)
-            e["hero.description"] = "Max 300 characters";
+        if (!data.main.title_line1.trim()) e["main.title_line1"] = "Required";
+        if (!data.main.description.trim()) e["main.description"] = "Required";
+        else if (data.main.description.length > 300)
+            e["main.description"] = "Max 300 characters";
         if (!data.seo.meta_title.trim()) e["seo.meta_title"] = "Required";
         else if (data.seo.meta_title.length > 60)
             e["seo.meta_title"] = "Max 60 characters";
@@ -171,17 +206,63 @@ export default function CharterBusForm({ initialData, onSave }) {
     };
 
     const handleNext = () => {
-        if (tabIndex < TABS.length - 1) setTab(TABS[tabIndex + 1].id);
+        if (tabIndex < TABS.length - 1) {
+            if (!validate()) {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                return;
+            }
+            setTab(TABS[tabIndex + 1].id);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
     };
 
     const handlePrev = () => {
-        if (tabIndex > 0) setTab(TABS[tabIndex - 1].id);
+        if (tabIndex > 0) {
+            setTab(TABS[tabIndex - 1].id);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
     };
 
     const handleSubmit = () => {
-        if (validate()) onSave?.(data);
+        if (validate()) {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            onSave?.(data);
+        } else {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
     };
 
+    const [countryInput, setCountryInput] = useState("");
+    const [countries, setCountries] = useState([]);
+
+    const [cityInput, setCityInput] = useState("");
+    const [cities, setCities] = useState([]);
+
+    const [selectedCountryCode, setSelectedCountryCode] = useState(null);
+
+    const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+    const [showCityDropdown, setShowCityDropdown] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const countryRef = useRef(null);
+    const cityRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (countryRef.current && !countryRef.current.contains(e.target)) {
+                setShowCountryDropdown(false);
+            }
+            if (cityRef.current && !cityRef.current.contains(e.target)) {
+                setShowCityDropdown(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+    
+   
+  
     return (
         <div className="bg-white">
             {/* Tab bar */}
@@ -230,7 +311,7 @@ export default function CharterBusForm({ initialData, onSave }) {
                                 )}
                             </div>
                             <Input
-                                value={data.slug}
+                                value={data.slug || ""}
                                 onChange={(v) => {
                                     setSlugEdited(true);
                                     setBasic(
@@ -241,7 +322,7 @@ export default function CharterBusForm({ initialData, onSave }) {
                                             .replace(/[^a-z0-9-/]/g, ""),
                                     );
                                 }}
-                                placeholder="new-york-charter-bus-usa"
+                                placeholder="new-york-usa"
                                 error={errors.slug}
                             />
                             <p className="text-xs text-gray-400 mt-1.5">
@@ -255,29 +336,125 @@ export default function CharterBusForm({ initialData, onSave }) {
                                 {" · "}
                                 Preview:{" "}
                                 <code className="text-blue-500 bg-gray-50 px-1.5 py-0.5 rounded">
-                                    /city/{data.slug || "your-slug"}
+                                    /{slugify(data.country) || "your-country"}/
+                                    {slugify(data.city) || "your-city"}
                                 </code>
                             </p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div>
+                            {/* 🌍 COUNTRY */}
+                            <div className="relative" ref={countryRef}>
                                 <Label required>Country</Label>
+
                                 <Input
-                                    value={data.country}
-                                    onChange={(v) => setBasic("country", v)}
-                                    placeholder="United States"
-                                    error={errors.country}
+                                    value={countryInput}
+                                    onChange={async (v) => {
+                                        setCountryInput(v);
+
+                                        if (!v) {
+                                            setCountries([]);
+                                            return;
+                                        }
+
+                                        const res = await getCountries(v);
+                                        setCountries(res);
+                                        setShowCountryDropdown(true);
+                                    }}
+                                    onFocus={async () => {
+                                        if (countryInput) {
+                                            const res = await getCountries(countryInput);
+                                            setCountries(res);
+                                        }
+                                        setShowCountryDropdown(true);
+                                    }}
+                                    placeholder="Select Country"
                                 />
+
+                                {showCountryDropdown &&
+                                    countries.length > 0 && (
+                                        <div className="absolute z-10 w-full bg-white border rounded mt-1 max-h-60 overflow-y-auto">
+                                            {countries.map((c) => (
+                                                <div
+                                                    key={c.code}
+                                                    onClick={async () => {
+                                                        setCountryInput(c.name);
+                                                        setSelectedCountryCode(
+                                                            c.code,
+                                                        );
+                                                        setBasic(
+                                                            "country",
+                                                            c.name,
+                                                        );
+
+                                                        setShowCountryDropdown(
+                                                            false,
+                                                        );
+
+                                                        // 🔥 Load cities
+                                                        const cityData =
+                                                            await getCities(
+                                                                c.name,
+                                                            );
+                                                        setCities(cityData);
+                                                    }}
+                                                    className="p-3 cursor-pointer hover:bg-gray-100"
+                                                >
+                                                    {c.name}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                             </div>
-                            <div>
+
+                            {/* 🏙️ CITY */}
+                            <div className="relative" ref={cityRef}>
                                 <Label required>City</Label>
+
                                 <Input
-                                    value={data.city}
-                                    onChange={(v) => setBasic("city", v)}
-                                    placeholder="New York"
-                                    error={errors.city}
+                                    value={cityInput}
+                                    onChange={(v) => {
+                                        setCityInput(v);
+                                        setShowCityDropdown(true);
+                                    }}
+                                    onFocus={() => {
+                                        setShowCityDropdown(true);
+                                    }}
+                                    placeholder="Select City"
+                                    disabled={!selectedCountryCode}
                                 />
+
+                                {showCityDropdown && cities.length > 0 && (
+                                    <div className="absolute z-10 w-full bg-white border rounded mt-1 max-h-60 overflow-y-auto">
+                                        {cities
+                                            .filter((c) =>
+                                                c.name
+                                                    .toLowerCase()
+                                                    .includes(
+                                                        cityInput.toLowerCase(),
+                                                    ),
+                                            )
+                                            .slice(0, 8)
+                                            .map((c) => (
+                                                <div
+                                                    key={c.id}
+                                                    onClick={() => {
+                                                        setCityInput(c.name);
+                                                        setBasic(
+                                                            "city",
+                                                            c.name,
+                                                        );
+                                                        setShowCityDropdown(
+                                                            false,
+                                                        );
+                                                    }}
+                                                    className="p-3 cursor-pointer hover:bg-gray-100"
+                                                >
+                                                    {c.name}
+                                                </div>
+                                            ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -306,10 +483,10 @@ export default function CharterBusForm({ initialData, onSave }) {
                         <div>
                             <Label required>Title Line 1</Label>
                             <Input
-                                value={data.hero.title_line1}
-                                onChange={(v) => setHero("title_line1", v)}
+                                value={data.main?.title_line1 || ""}
+                                onChange={(v) => setMain("title_line1", v)}
                                 placeholder="Book Your"
-                                error={errors["hero.title_line1"]}
+                                error={errors["main.title_line1"]}
                             />
                             <p className="text-xs text-gray-400 mt-1.5">
                                 First line of the hero heading
@@ -319,11 +496,11 @@ export default function CharterBusForm({ initialData, onSave }) {
                         <div>
                             <Label required>Description</Label>
                             <Textarea
-                                value={data.hero.description}
-                                onChange={(v) => setHero("description", v)}
+                                value={data.main?.description || ""}
+                                onChange={(v) => setMain("description", v)}
                                 placeholder="Experience premium group travel with our fleet of luxury coaches..."
                                 rows={4}
-                                error={errors["hero.description"]}
+                                error={errors["main.description"]}
                                 maxLength={300}
                             />
                         </div>
@@ -333,11 +510,10 @@ export default function CharterBusForm({ initialData, onSave }) {
                 {/* ── SEO SETTINGS ── */}
                 {tab === "seo" && (
                     <>
-
                         <div>
                             <Label required>Meta Title</Label>
                             <Input
-                                value={data.seo.meta_title}
+                                value={data.seo?.meta_title || ""}
                                 onChange={(v) => setSeo("meta_title", v)}
                                 placeholder="New York Charter Bus Rental"
                                 error={errors["seo.meta_title"]}
@@ -357,7 +533,7 @@ export default function CharterBusForm({ initialData, onSave }) {
                         <div>
                             <Label required>Meta Description</Label>
                             <Textarea
-                                value={data.seo.meta_description}
+                                value={data.seo?.meta_description || ""}
                                 onChange={(v) => setSeo("meta_description", v)}
                                 placeholder="Book charter buses in New York with luxury coaches and professional drivers."
                                 rows={3}
@@ -372,7 +548,7 @@ export default function CharterBusForm({ initialData, onSave }) {
                         <div>
                             <Label>Focus Keyword</Label>
                             <Input
-                                value={data.seo.focus_keyword}
+                                value={data.seo?.focus_keyword || ""}
                                 onChange={(v) => setSeo("focus_keyword", v)}
                                 placeholder="charter bus new york"
                                 error={errors["seo.focus_keyword"]}
@@ -385,9 +561,9 @@ export default function CharterBusForm({ initialData, onSave }) {
                         <div>
                             <Label>Canonical URL</Label>
                             <Input
-                                value={data.seo.canonical_url}
+                                value={data.seo?.canonical_url || ""}
                                 onChange={(v) => setSeo("canonical_url", v)}
-                                placeholder="https://yoursite.com/usa/new-york/charter-bus"
+                                placeholder="https://yoursite.com/usa/new-york"
                                 error={errors["seo.canonical_url"]}
                             />
                             <p className="text-xs text-gray-400 mt-1">
@@ -403,7 +579,7 @@ export default function CharterBusForm({ initialData, onSave }) {
                         <div>
                             <Label>OG Title</Label>
                             <Input
-                                value={data.seo.og_title}
+                                value={data.seo?.og_title || ""}
                                 onChange={(v) => setSeo("og_title", v)}
                                 placeholder="New York Charter Bus Rental — Book Now"
                                 error={errors["seo.og_title"]}
@@ -417,7 +593,7 @@ export default function CharterBusForm({ initialData, onSave }) {
                         <div>
                             <Label>OG Description</Label>
                             <Textarea
-                                value={data.seo.og_description}
+                                value={data.seo?.og_description || ""}
                                 onChange={(v) => setSeo("og_description", v)}
                                 placeholder="Premium charter bus rentals in New York. Book online in minutes."
                                 rows={2}
@@ -429,7 +605,7 @@ export default function CharterBusForm({ initialData, onSave }) {
                         <div>
                             <Label>OG Image URL</Label>
                             <Input
-                                value={data.seo.og_image}
+                                value={data.seo?.og_image || ""}
                                 onChange={(v) => setSeo("og_image", v)}
                                 placeholder="https://yoursite.com/images/og-new-york.jpg"
                                 error={errors["seo.og_image"]}

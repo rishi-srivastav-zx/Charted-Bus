@@ -1,5 +1,5 @@
 import Booking from "../models/booking.js";
-import { sendBookingConfirmationEmail } from "../utils/email.js";
+import { sendBookingConfirmationEmail, sendLeadNotificationEmail } from "../utils/email.js";
 
 export const saveBasicDetails = async (req, res) => {
     try {
@@ -206,12 +206,20 @@ export const confirmBooking = async (req, res) => {
 
         await booking.save();
 
+        // Send email to customer
         if (booking.contact?.email) {
             try {
                 await sendBookingConfirmationEmail(booking);
             } catch (emailError) {
                 console.error("Failed to send confirmation email:", emailError);
             }
+        }
+
+        // Send lead notification to admin
+        try {
+            await sendLeadNotificationEmail(booking);
+        } catch (leadEmailError) {
+            console.error("Failed to send lead notification email:", leadEmailError);
         }
 
         res.status(200).json({
@@ -317,5 +325,26 @@ export const getAllBookings = async (req, res) => {
     } catch (error) {
         console.error("Error fetching bookings:", error);
         res.status(500).json({ msg: "Failed to fetch bookings" });
+    }
+};
+
+export const deleteBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            return res.status(404).json({ msg: "Booking not found" });
+        }
+
+        await Booking.findByIdAndDelete(id);
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Booking deleted successfully" 
+        });
+    } catch (error) {
+        console.error("Error deleting booking:", error);
+        res.status(500).json({ msg: "Failed to delete booking" });
     }
 };

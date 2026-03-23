@@ -96,11 +96,7 @@ export default function Header() {
         }
     };
 
-    /**
-     * Handles nav link clicks.
-     * If the href is an anchor on the home page (e.g. /#fleet),
-     * it scrolls smoothly instead of doing a hard jump.
-     */
+   
     const handleNavClick = (e, href) => {
         e.preventDefault();
         setIsMobileMenuOpen(false);

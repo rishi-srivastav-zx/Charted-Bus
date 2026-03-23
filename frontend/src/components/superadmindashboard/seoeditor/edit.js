@@ -723,7 +723,7 @@ export default function CharterBusEditor({ initialData, onSave }) {
                                             <div>
                                                 <Label required>Question</Label>
                                                 <Input
-                                                    value={faq.q}
+                                                    value={faq}
                                                     onChange={(v) =>
                                                         setArr(
                                                             "faq",
@@ -739,7 +739,7 @@ export default function CharterBusEditor({ initialData, onSave }) {
                                             <div>
                                                 <Label required>Answer</Label>
                                                 <Textarea
-                                                    value={faq.a}
+                                                    value={faq}
                                                     onChange={(v) =>
                                                         setArr(
                                                             "faq",
