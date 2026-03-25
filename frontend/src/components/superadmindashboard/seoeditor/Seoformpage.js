@@ -224,6 +224,7 @@ function ImageUpload({ value, onChange, label, hint, error, required }) {
     const [urlMode, setUrlMode] = useState(true);
     const [urlVal, setUrlVal] = useState("");
     const [dragging, setDrag] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
     const handleFile = (file) => {
         if (!file || !file.type.startsWith("image/")) return;
         const reader = new FileReader();
@@ -299,26 +300,42 @@ function ImageUpload({ value, onChange, label, hint, error, required }) {
                 </div>
             )}
             {value && (
-                <div
-                    className="relative rounded-xl overflow-hidden border border-gray-200 mt-1"
-                    style={{ height: 160 }}
-                >
+                <>
+                    {/* Click to Preview */}
+                    <div
+                        onClick={() => setShowPreview(true)}
+                        className="mt-2 cursor-pointer text-blue-600 hover:underline text-sm"
+                    >
+                        Click here to see preview 👀
+                    </div>
+
+                    {/* Small Thumbnail (optional) */}
                     <img
                         src={value}
                         alt="Preview"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            e.target.style.display = "none";
-                        }}
+                        className="w-24 h-24 object-cover rounded-md mt-2 border"
                     />
-                    <button
-                        type="button"
-                        onClick={clearImage}
-                        className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full shadow flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all"
-                    >
-                        <X className="w-3.5 h-3.5" />
-                    </button>
-                </div>
+
+                    {/* Full Screen Modal */}
+                    {showPreview && (
+                        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+                            {/* Image */}
+                            <img
+                                src={value}
+                                alt="Full Preview"
+                                className="max-h-[90%] max-w-[90%] object-contain rounded-lg shadow-lg"
+                            />
+
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setShowPreview(false)}
+                                className="absolute top-5 right-5 bg-white text-black w-9 h-9 rounded-full flex items-center justify-center shadow hover:bg-red-500 hover:text-white transition"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
         </FormField>
     );

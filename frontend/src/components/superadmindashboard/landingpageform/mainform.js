@@ -152,12 +152,24 @@ export default function CharterBusForm({ initialData, onSave }) {
             }
             return updated;
         });
-        clearErr(k);
+        // Live maxLength validation for slug
+        if (k === "slug" && v.length > 50) {
+            setErrors((e) => ({ ...e, slug: "Max 50 characters" }));
+        } else {
+            clearErr(k);
+        }
         if (k === "slug") setSlugEdited(true);
     };
     const setMain = (k, v) => {
         setData((d) => ({ ...d, main: { ...d.main, [k]: v } }));
-        clearErr(`main.${k}`);
+        // Live maxLength validation
+        if (k === "title_line1" && v.length > 80) {
+            setErrors((e) => ({ ...e, ["main.title_line1"]: "Max 80 characters" }));
+        } else if (k === "description" && v.length > 200) {
+            setErrors((e) => ({ ...e, ["main.description"]: "Max 200 characters" }));
+        } else {
+            clearErr(`main.${k}`);
+        }
     };
     const setSeo = (k, v) => {
         setData((d) => ({ ...d, seo: { ...d.seo, [k]: v } }));
@@ -172,45 +184,74 @@ export default function CharterBusForm({ initialData, onSave }) {
 
     const tabIndex = TABS.findIndex((t) => t.id === tab);
 
-    const validate = () => {
+    // Validate only the fields belonging to a specific tab
+    const validateTab = (tabId) => {
         const e = {};
-        if (!data.slug.trim()) e.slug = "Required";
-        else if (!/^[a-z0-9-]+(\/[a-z0-9-]+)*$/.test(data.slug))
-            e.slug = "Lowercase letters, numbers, hyphens and slashes only";
-        if (!data.country.trim()) e.country = "Required";
-        if (!data.city.trim()) e.city = "Required";
-        if (!data.main.title_line1.trim()) e["main.title_line1"] = "Required";
-        if (!data.main.description.trim()) e["main.description"] = "Required";
-        else if (data.main.description.length > 300)
-            e["main.description"] = "Max 300 characters";
-        if (!data.seo.meta_title.trim()) e["seo.meta_title"] = "Required";
-        else if (data.seo.meta_title.length > 60)
-            e["seo.meta_title"] = "Max 60 characters";
-        if (!data.seo.meta_description.trim())
-            e["seo.meta_description"] = "Required";
-        else if (data.seo.meta_description.length > 160)
-            e["seo.meta_description"] = "Max 160 characters";
-        if (data.seo.og_description.length > 200)
-            e["seo.og_description"] = "Max 200 characters";
-        if (
-            data.seo.canonical_url &&
-            !/^https?:\/\/.+/.test(data.seo.canonical_url)
-        )
-            e["seo.canonical_url"] =
-                "Must be a valid URL starting with http:// or https://";
-        if (data.seo.og_image && !/^https?:\/\/.+/.test(data.seo.og_image))
-            e["seo.og_image"] =
-                "Must be a valid URL starting with http:// or https://";
+        if (tabId === "basic") {
+            if (!data.slug.trim()) e.slug = "Required";
+            else if (data.slug.length > 80) e.slug = "Max 80 characters";
+            else if (!/^[a-z0-9-]+(\/[a-z0-9-]+)*$/.test(data.slug))
+                e.slug = "Lowercase letters, numbers, hyphens and slashes only";
+            if (!data.country.trim()) e.country = "Required";
+            if (!data.city.trim()) e.city = "Required";
+        }
+        if (tabId === "hero") {
+            if (!data.main.title_line1.trim()) e["main.title_line1"] = "Required";
+            else if (data.main.title_line1.length > 80)
+                e["main.title_line1"] = "Max 80 characters";
+            if (!data.main.description.trim()) e["main.description"] = "Required";
+            else if (data.main.description.length > 200)
+                e["main.description"] = "Max 200 characters";
+        }
+        if (tabId === "seo") {
+            if (!data.seo.meta_title.trim()) e["seo.meta_title"] = "Required";
+            else if (data.seo.meta_title.length > 60)
+                e["seo.meta_title"] = "Max 60 characters";
+            if (!data.seo.meta_description.trim())
+                e["seo.meta_description"] = "Required";
+            else if (data.seo.meta_description.length > 160)
+                e["seo.meta_description"] = "Max 160 characters";
+            if (data.seo.og_description.length > 200)
+                e["seo.og_description"] = "Max 200 characters";
+            if (
+                data.seo.canonical_url &&
+                !/^https?:\/\/.+/.test(data.seo.canonical_url)
+            )
+                e["seo.canonical_url"] =
+                    "Must be a valid URL starting with http:// or https://";
+            if (data.seo.og_image && !/^https?:\/\/.+/.test(data.seo.og_image))
+                e["seo.og_image"] =
+                    "Must be a valid URL starting with http:// or https://";
+        }
+        return e;
+    };
+
+    // Validate all tabs (used on final submit)
+    const validateAll = () => {
+        const e = {
+            ...validateTab("basic"),
+            ...validateTab("hero"),
+            ...validateTab("seo"),
+        };
         setErrors(e);
         return Object.keys(e).length === 0;
     };
 
     const handleNext = () => {
         if (tabIndex < TABS.length - 1) {
-            if (!validate()) {
+            const currentTabId = TABS[tabIndex].id;
+            const tabErrors = validateTab(currentTabId);
+            if (Object.keys(tabErrors).length > 0) {
+                setErrors((prev) => ({ ...prev, ...tabErrors }));
                 window.scrollTo({ top: 0, behavior: "smooth" });
                 return;
             }
+            // Clear errors for this tab before moving forward
+            setErrors((prev) => {
+                const next = { ...prev };
+                Object.keys(tabErrors).forEach((k) => delete next[k]);
+                return next;
+            });
             setTab(TABS[tabIndex + 1].id);
             window.scrollTo({ top: 0, behavior: "smooth" });
         }
@@ -224,7 +265,7 @@ export default function CharterBusForm({ initialData, onSave }) {
     };
 
     const handleSubmit = () => {
-        if (validate()) {
+        if (validateAll()) {
             window.scrollTo({ top: 0, behavior: "smooth" });
             onSave?.(data);
         } else {
@@ -482,11 +523,13 @@ export default function CharterBusForm({ initialData, onSave }) {
                     <>
                         <div>
                             <Label required>Title Line 1</Label>
-                            <Input
+                            <Textarea
                                 value={data.main?.title_line1 || ""}
                                 onChange={(v) => setMain("title_line1", v)}
                                 placeholder="Book Your"
+                                rows={2}    
                                 error={errors["main.title_line1"]}
+                                maxLength={80}  
                             />
                             <p className="text-xs text-gray-400 mt-1.5">
                                 First line of the hero heading
@@ -501,7 +544,7 @@ export default function CharterBusForm({ initialData, onSave }) {
                                 placeholder="Experience premium group travel with our fleet of luxury coaches..."
                                 rows={4}
                                 error={errors["main.description"]}
-                                maxLength={300}
+                                maxLength={200}
                             />
                         </div>
                     </>
@@ -670,14 +713,22 @@ export default function CharterBusForm({ initialData, onSave }) {
                 )}
             </div>
 
-            {Object.keys(errors).length > 0 && (
-                <div className="mx-6 mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-red-600 text-xs font-medium">
-                        ⚠ {Object.keys(errors).length} field(s) need attention
-                        before saving.
-                    </p>
-                </div>
-            )}
+            {(() => {
+                const currentTabErrors = Object.keys(
+                    validateTab(TABS[tabIndex].id)
+                ).filter((k) => errors[k]);
+                return currentTabErrors.length > 0 ? (
+                    <div className="mx-6 mb-4 px-4 py-2.5 bg-red-50 border border-red-200 rounded-md">
+                        <p className="text-red-600 text-xs font-medium">
+                            ⚠ Please fill in the{" "}
+                            {currentTabErrors.length === 1
+                                ? "required field"
+                                : `${currentTabErrors.length} required fields`}{" "}
+                            above to continue.
+                        </p>
+                    </div>
+                ) : null;
+            })()}
         </div>
     );
 }

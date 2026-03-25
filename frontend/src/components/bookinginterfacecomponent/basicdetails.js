@@ -1599,7 +1599,7 @@ export default function LuxCharterPage(safePageData) {
 
     // Split heading into two halves
     const words = heading.split(" ");
-    const mid = Math.ceil(words.length / 2);
+    const mid = Math.ceil(words.length / 3);
     const firstHalf = words.slice(0, mid).join(" ");
     const secondHalf = words.slice(mid).join(" ");
 
@@ -1630,7 +1630,7 @@ export default function LuxCharterPage(safePageData) {
                             {safePageData?.initialData?.main?.title_line1 || "Premium Charter Services"}
                         </div>
                         <div>
-                            <h1 className="text-5xl lg:text-[58px] font-black text-slate-900 leading-[1.05] tracking-tight">
+                            <h1 className="text-5xl lg:text-[55px] font-black text-slate-900 leading-[1.05] tracking-tight">
                                 {firstHalf}
                                 <br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">

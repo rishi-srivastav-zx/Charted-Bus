@@ -70,11 +70,27 @@ export const BUS_FEATURES = [
 ];
 
 export const BUS_VIEWS = {
- exterior: "https://mms.businesswire.com/media/20200831005698/en/817196/5/Exterior_%281%29.jpg?download=1",
-  
- interior: "https://lirp.cdn-website.com/edcb2ea2/dms3rep/multi/opt/Motor%2BCoach%2BInterior-640w.jpg",
-  
- cabin: "https://st4.depositphotos.com/24664374/30078/i/450/depositphotos_300784550-stock-photo-drivers-seat-on-the-bus.jpg"
+    exterior: [
+        "https://mms.businesswire.com/media/20200831005698/en/817196/5/Exterior_%281%29.jpg?download=1",
+        "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80",
+        "https://www.unitedbuses.com/wp-content/uploads/Screen-Shot-2022-06-12-at-6.04.38-PM.webp",
+        "https://libertycoach.com/wp-content/uploads/2016/01/Liberty-Coach-800-Exterior-Overview.jpg",
+        "https://libertycoach.com/wp-content/uploads/2017/02/Liberty-Coach-822-Exterior-Overview.jpg",
+    ],
+
+    interior: [
+        "https://lirp.cdn-website.com/edcb2ea2/dms3rep/multi/opt/Motor%2BCoach%2BInterior-640w.jpg",
+        "https://gogocharters.com/blog/wp-content/uploads/2019/04/gogo-interior-seats.jpg",
+        "https://avalonbus.com/wp-content/uploads/2022/01/40passengerinterior1.jpg",
+        "https://www.jtb.co.jp/luxurytravel/globalloungeginza/basic/bus_introduction/images/image-section_01-seat_01.jpg",
+        "https://www.charterempire.com/wp-content/uploads/2023/08/Detailed-Look-of-A-Charter-Bus-Inside.jpg",
+    ],
+
+    cabin: [
+        "https://st4.depositphotos.com/24664374/30078/i/450/depositphotos_300784550-stock-photo-drivers-seat-on-the-bus.jpg",
+        "http://fleetnewsdaily.com/wp-content/uploads/2017/06/Screen-Shot-2017-06-23-at-6.51.52-AM.png",
+        "https://en.yutong.com/res/res/editor/2023827/8ac292568abf4034018ad54205130057.jpg",
+    ],
 };
 
 export const STEPS = [

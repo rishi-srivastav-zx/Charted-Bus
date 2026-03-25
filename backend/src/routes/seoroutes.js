@@ -4,29 +4,34 @@ import {
     getAllPages,
     getPageById,
     getPageBySlug,
+    previewPageBySlug,
     updatePage,
     patchPage,
     deletePage,
+    publishPage,
 } from "../controllers/seoController.js";
+import { protect } from "../middlewares/auth.js";
 
 const router = express.Router();
 
-// POST   /api/charter-bus              → create
-// GET    /api/charter-bus              → get all
-router.route("/").post(createPage).get(getAllPages);
+// Public routes - MUST come before /:id
+router.get("/slug", getPageBySlug);
 
-// GET    /api/charter-bus/slug/:slug   → get by slug (must stay above /:id)
-router.get("/slug/:slug", getPageBySlug);
+// Admin only routes
+router.post("/", protect, createPage);
+router.get("/", getAllPages);
 
-// GET    /api/charter-bus/:id          → get one
-// PUT    /api/charter-bus/:id          → full update
-// PATCH  /api/charter-bus/:id          → partial update (single wizard step)
-// DELETE /api/charter-bus/:id          → delete
+// Admin preview - any status
+router.get("/preview", protect, previewPageBySlug);
+
+// Admin only - single resource operations (MUST be last)
 router
     .route("/:id")
-    .get(getPageById)
-    .put(updatePage)
-    .patch(patchPage)
-    .delete(deletePage);
+    .get(protect, getPageById)
+    .put(protect, updatePage)
+    .patch(protect, patchPage)
+    .delete(protect, deletePage);
+
+router.patch("/:id/publish", protect, publishPage);
 
 export default router;

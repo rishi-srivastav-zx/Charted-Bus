@@ -8,27 +8,6 @@ import Navbar from '../components/header';
 import Hero from '../components/hero';
 
 
-// const CharterBusGuide = dynamic(() => import('../components/seoComponent/CharterBusGuide'), {
-//   loading: () => <SectionSkeleton title="Charter Bus Guide" />,
-//   ssr: true 
-// }); 
-
-// const IndustriesWeServe = dynamic(() => import('../components/seoComponent/IndustriesWeServe'), {
-//   loading: () => <SectionSkeleton title="Industries We Serve" />,
-//   ssr: true
-// });
-
-// const AffordableLuxury = dynamic(() => import('../components/seoComponent/AffordableLuxury'), {
-//   loading: () => <SectionSkeleton title="Affordable Luxury" />,
-//   ssr: true
-// });
-
-// const NationwideCoverage = dynamic(() => import('../components/seoComponent/NationwideCoverage'), {
-//   loading: () => <SectionSkeleton title="Nationwide Coverage" />,
-//   ssr: true
-// });
-
-
 const BusTypes = dynamic(() => import('../components/bustype'), {
   loading: () => <SectionSkeleton title="Our Fleet" />,
   ssr: true
@@ -51,11 +30,6 @@ const InteractiveView = dynamic(() => import('../components/interactiveview'), {
 
 const HowItWorks = dynamic(() => import('../components/workandform').then(mod => mod.HowItWorks), {
   loading: () => <SectionSkeleton title="How It Works" />,
-  ssr: true
-});
-
-const QuoteForm = dynamic(() => import('../components/workandform').then(mod => mod.QuoteForm), {
-  loading: () => <SectionSkeleton title="Get a Quote" />,
   ssr: true
 });
 
@@ -131,36 +105,8 @@ class ErrorBoundary extends React.Component {
 export default function LandingPage() {
   return (
     <div className="w-full min-h-screen">
-      {/* Critical path - loaded immediately */}
       <Navbar />
       <Hero />
-
-
-      
-      {/* Lazy loaded with priority hints */}
-      {/* <ErrorBoundary>
-        <Suspense fallback={<SectionSkeleton title="Loading..." />}>
-          <CharterBusGuide />
-        </Suspense>
-      </ErrorBoundary>
-
-      <ErrorBoundary>
-        <Suspense fallback={<SectionSkeleton title="Loading..." />}>
-          <IndustriesWeServe />
-        </Suspense>
-      </ErrorBoundary>
-
-      <ErrorBoundary>
-        <Suspense fallback={<SectionSkeleton title="Loading..." />}>
-          <AffordableLuxury />
-        </Suspense>
-      </ErrorBoundary>
-
-      <ErrorBoundary>
-        <Suspense fallback={<SectionSkeleton title="Loading..." />}>
-          <NationwideCoverage />
-        </Suspense>
-      </ErrorBoundary> */}
 
       <ErrorBoundary>
         <Suspense fallback={<SectionSkeleton title="Loading..." />}>
@@ -191,13 +137,7 @@ export default function LandingPage() {
           <HowItWorks />
         </Suspense>
       </ErrorBoundary>
-
-      <ErrorBoundary>
-        <Suspense fallback={<SectionSkeleton title="Loading..." />}>
-          <QuoteForm />
-        </Suspense>
-      </ErrorBoundary>
-
+      
       <ErrorBoundary>
         <Suspense fallback={<SectionSkeleton title="Loading..." />}>
           <Testimonials />

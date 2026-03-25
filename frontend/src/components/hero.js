@@ -4,6 +4,7 @@ import { ChevronRight, Star, Phone, MapPin, X, Globe } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNav } from "./navigation-provider";
 import { getAllPages } from "@/services/landingpage";
+import HeroImageSection from "./heroimagesection";  
 
 const Hero = () => {
     const [blur, setBlur] = useState(false);
@@ -138,7 +139,9 @@ const Hero = () => {
                     </span>
                     <h1 className="text-5xl md:text-7xl font-extrabold text-white leading-[1.1] mb-6">
                         Premium Charter Bus Rentals{" "}
-                        <span className="text-orange-500">Across the USA</span>
+                        <span className="text-orange-500">
+                            Across the World
+                        </span>
                     </h1>
                     <p className="text-xl text-white/80 mb-10 max-w-lg leading-relaxed">
                         Comfortable, Reliable and Affordable Group
@@ -254,7 +257,11 @@ const Hero = () => {
                     )}
 
                     <button
-                        onClick={() => navigate("#buses")}
+                        onClick={() =>
+                            document
+                                .getElementById("buses")
+                                ?.scrollIntoView({ behavior: "smooth" })
+                        }
                         className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/30 px-8 py-4 rounded-full font-bold text-lg transition-all ml-4"
                     >
                         View Buses
@@ -292,64 +299,7 @@ const Hero = () => {
                     </div>
                 </motion.div>
 
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 1, delay: 0.2 }}
-                    className="relative hidden md:block"
-                >
-                    <img
-                        src="https://images.unsplash.com/photo-1570125909232-eb263c188f7e?auto=format&fit=crop&w=800&q=80"
-                        alt="Luxury Coach"
-                        className="rounded-3xl shadow-2xl border-4 border-white/10"
-                        referrerPolicy="no-referrer"
-                    />
-
-                    <motion.div
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{
-                            duration: 4,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                        }}
-                        className="absolute -top-6 -left-6 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex items-center gap-3 shadow-xl"
-                    >
-                        <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white">
-                            <Phone size={18} />
-                        </div>
-                        <div>
-                            <div className="text-white font-bold text-sm">
-                                24/7 Support
-                            </div>
-                            <div className="text-white/60 text-xs">
-                                Always here for you
-                            </div>
-                        </div>
-                    </motion.div>
-
-                    <motion.div
-                        animate={{ y: [0, 10, 0] }}
-                        transition={{
-                            duration: 5,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: 1,
-                        }}
-                        className="absolute -bottom-6 -right-6 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl flex items-center gap-3 shadow-xl"
-                    >
-                        <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white">
-                            <MapPin size={18} />
-                        </div>
-                        <div>
-                            <div className="text-white font-bold text-sm">
-                                Nationwide Service
-                            </div>
-                            <div className="text-white/60 text-xs">
-                                Coast to coast coverage
-                            </div>
-                        </div>
-                    </motion.div>
-                </motion.div>
+                <HeroImageSection />
             </div>
         </section>
     );
