@@ -1,4 +1,4 @@
-import apiClient from "./appclient";
+import apiClient from "./frontendmiddleware/appclient";
 
 export const saveBasicDetails = (data) => {
     return apiClient.post("/bookings/basic-details", data);
@@ -27,11 +27,17 @@ export const getBookingByConfirmation = (confirmationNumber) => {
 export const cancelBooking = (bookingId) => {
     return apiClient.patch(`/bookings/${bookingId}/cancel`);
 };
-
-export const getAllBookings = (params) => {
+export const getAllBookings = (params = {}) => {
     return apiClient.get("/bookings", { params });
 };
 
 export const deleteBooking = (id) => {
     return apiClient.delete(`/bookings/${id}`);
+};
+
+export const updateBooking = (id, data) => {
+    return apiClient.put(`/bookings/${id}`, data);
+};
+export const updateBookingStatus = (id, status) => {
+    return apiClient.patch(`/bookings/${id}/status`, { status });
 };

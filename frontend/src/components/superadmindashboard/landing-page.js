@@ -61,7 +61,6 @@ const StatusBadge = ({ status }) => {
 };
 
 const PageIcon = ({ country, city }) => {
-    // Generate a consistent icon/color based on country/city
     const seed = (country + city).length;
     const icons = [Globe, FileText, Layout, Sparkles];
     const Icon = icons[seed % icons.length];
@@ -103,21 +102,13 @@ const Modal = ({ mode, page, onClose, onSave, onSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const getToken = () => {
-        if (typeof window !== "undefined") {
-            return localStorage.getItem("accessToken");
-        }
-        return null;
-    };
-
     useEffect(() => {
         let isMounted = true;
 
         const loadFullPage = async () => {
             if (mode === "edit" && page) {
                 try {
-                    const token = getToken();
-                    const fullPage = await getPageById(page._id || page.id, token);
+                    const fullPage = await getPageById(page._id || page.id);
                     if (!isMounted) return;
 
                     setMainData({
@@ -254,13 +245,12 @@ const Modal = ({ mode, page, onClose, onSave, onSuccess }) => {
             setLoading(true);
             setError(null);
             const finalData = { ...mainData, ...seoData };
-            const token = getToken();
 
             if (mode === "edit" && page?._id) {
-                await updatePage(page._id, finalData, token);
+                await updatePage(page._id, finalData);
                 toast.success("Page updated successfully!");
             } else {
-                await createPage(finalData, token);
+                await createPage(finalData);
                 toast.success("Page created successfully!");
             }
 
@@ -427,20 +417,11 @@ export default function LandingPages() {
 
     const menuRef = useRef(null);
 
-    const getToken = () => {
-        if (typeof window !== "undefined") {
-            return localStorage.getItem("accessToken");
-        }
-        return null;
-    };
-
     useEffect(() => {
         async function fetchPages() {
             try {
                 setLoading(true);
-                const token = getToken();
-                const data = await getAllPages(token);
-                console.log("Fetched pages:", data);
+                const data = await getAllPages();
                 if (Array.isArray(data)) {
                     setPages(data);
                     setNextId(data.length + 1);
@@ -529,8 +510,7 @@ export default function LandingPages() {
 
     const handleRefreshPages = async () => {
         try {
-            const token = getToken();
-            const data = await getAllPages(token);
+            const data = await getAllPages();
             if (Array.isArray(data)) setPages(data);
         } catch (error) {
             console.error("Error refreshing pages:", error);
@@ -540,9 +520,8 @@ export default function LandingPages() {
     const handleEdit = async (form) => {
         try {
             const pageId = form._id || form.id;
-            const token = getToken();
             if (pageId) {
-                await updatePage(pageId, form, token);
+                await updatePage(pageId, form);
                 toast.success("Page updated successfully!");
                 handleRefreshPages();
             }
@@ -556,9 +535,8 @@ export default function LandingPages() {
     const handleDelete = async (pageItem) => {
         try {
             const pageId = pageItem._id || pageItem.id;
-            const token = getToken();
             if (pageId) {
-                await deletePage(pageId, token);
+                await deletePage(pageId);
                 toast.success("Page deleted successfully!");
             }
             setPages((p) => p.filter((pg) => (pg._id || pg.id) !== pageId));
@@ -579,10 +557,9 @@ export default function LandingPages() {
             const pageId = pageItem._id || pageItem.id;
             const isCurrentlyPublished = pageItem.status === "Published";
             const newStatus = !isCurrentlyPublished;
-            const token = getToken();
-            
+
             if (pageId) {
-                await publishPage(pageId, newStatus, token);
+                await publishPage(pageId, newStatus);
             }
             
             setPages((p) =>

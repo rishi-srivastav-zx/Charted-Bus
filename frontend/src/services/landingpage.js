@@ -1,24 +1,47 @@
 import { cache } from "react";
-import apiClient from "./appclient";
+import apiClient from "./frontendmiddleware/appclient";
+import axios from "axios";  
 
 const ENDPOINT = "/charter-bus";
 
-// Helper for auth headers
-const authConfig = (accessToken) => ({
-    headers: accessToken
-        ? {
-              Authorization: `Bearer ${accessToken}`,
-          }
-        : {},
-    withCredentials: true,
+
+const serverSafeGet = async (url, options = {}) => {
+    const config = {
+        ...options,
+        headers: {
+            ...options.headers,
+            ...(options.token && { Authorization: `Bearer ${options.token}` }),
+        },
+    };
+    delete config.token;
+    return apiClient.get(url, config);
+};
+
+
+const serverClient = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
+    headers: { "Content-Type": "application/json" },
 });
 
+const serverSafeGetWithParams = async (url, params = {}, token = null) => {
+    const config = {
+        params,
+        ...(token && { headers: { Authorization: `Bearer ${token}` } }),
+    };
+    return serverClient.get(url, config);
+};  
 
-// Public - cached
+const publicClient = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
+    headers: { "Content-Type": "application/json" },
+});
+
+/* ==================== PUBLIC ROUTES (No Auth) ==================== */
+
 export const getPageBySlug = cache(async (slug) => {
     try {
-        const res = await apiClient.get(
-            `${ENDPOINT}/slug?slug=${encodeURIComponent(slug)}`,
+        const res = await publicClient.get(
+            `${ENDPOINT}/slug?slug=${encodeURIComponent(slug)}&_t=${Date.now()}`,
         );
         return res.data.data;
     } catch (error) {
@@ -27,12 +50,14 @@ export const getPageBySlug = cache(async (slug) => {
     }
 });
 
-// Admin preview - cached
+/* ==================== ADMIN ROUTES (Server Components) ==================== */
+
 export const previewPageBySlug = cache(async (slug, accessToken) => {
     try {
-        const res = await apiClient.get(
-            `${ENDPOINT}/preview?slug=${encodeURIComponent(slug)}`,
-            authConfig(accessToken),
+        const res = await serverSafeGetWithParams(
+            `${ENDPOINT}/preview`,
+            { slug: encodeURIComponent(slug) },
+            accessToken,
         );
         return res.data.data;
     } catch (error) {
@@ -41,24 +66,26 @@ export const previewPageBySlug = cache(async (slug, accessToken) => {
     }
 });
 
-// Admin - cached (list rarely changes)
-export const getAllPages = cache(async (accessToken) => {
+
+export const getAllPages = cache(async (params = {}, accessToken = null) => {
     try {
-        const res = await apiClient.get(ENDPOINT, authConfig(accessToken));
-        return res.data.data || [];
+        const res = await serverSafeGetWithParams(
+            ENDPOINT,
+            params,
+            accessToken,
+        );
+        return res.data?.data || [];
     } catch (error) {
         console.error("Error fetching pages:", error);
         return [];
     }
 });
 
-// Admin - cached
 export const getPageById = cache(async (id, accessToken) => {
     try {
-        const res = await apiClient.get(
-            `${ENDPOINT}/${id}`,
-            authConfig(accessToken),
-        );
+        const res = await serverSafeGet(`${ENDPOINT}/${id}`, {
+            token: accessToken,
+        });
         return res.data.data;
     } catch (error) {
         if (error.response?.status === 404) return null;
@@ -66,54 +93,51 @@ export const getPageById = cache(async (id, accessToken) => {
     }
 });
 
-// Admin - NO cache (mutations)
-export const createPage = async (pageData, accessToken) => {
-    try {
-        const res = await apiClient.post(
-            ENDPOINT,
-            pageData,
-            authConfig(accessToken),
-        );
-        return res.data.data;
-    } catch (error) {
-        throw error;
-    }
+/* ==================== ADMIN MUTATIONS (Client Components) ==================== */
+
+export const createPage = async (pageData) => {
+    const res = await apiClient.post(ENDPOINT, pageData);
+    return res.data.data;
 };
 
-export const updatePage = async (id, pageData, accessToken) => {
-    try {
-        const res = await apiClient.put(
-            `${ENDPOINT}/${id}`,
-            pageData,
-            authConfig(accessToken),
-        );
-        return res.data.data;
-    } catch (error) {
-        throw error;
-    }
+export const updatePage = async (id, pageData) => {
+    const res = await apiClient.put(`${ENDPOINT}/${id}`, pageData);
+    return res.data.data;
 };
 
-export const deletePage = async (id, accessToken) => {
-    try {
-        const res = await apiClient.delete(
-            `${ENDPOINT}/${id}`,
-            authConfig(accessToken),
-        );
-        return res.data.message || "Deleted successfully";
-    } catch (error) {
-        throw error;
-    }
+export const deletePage = async (id) => {
+    const res = await apiClient.delete(`${ENDPOINT}/${id}`);
+    return res.data.message || "Deleted successfully";
 };
 
-export const publishPage = async (id, isPublished, accessToken) => {
-    try {
-        const res = await apiClient.patch(
-            `${ENDPOINT}/${id}/publish`,
-            { isPublished },
-            authConfig(accessToken),
-        );
-        return res.data.data;
-    } catch (error) {
-        throw error;
-    }
+export const publishPage = async (id, isPublished) => {
+    const res = await apiClient.patch(`${ENDPOINT}/${id}/publish`, {
+        isPublished,
+    });
+    return res.data.data;
+};
+
+/* ==================== ADDITIONAL ADMIN UTILITIES ==================== */
+
+export const duplicatePage = async (id) => {
+    const res = await apiClient.post(`${ENDPOINT}/${id}/duplicate`);
+    return res.data.data;
+};
+
+export const updatePageSEO = async (id, seoData) => {
+    const res = await apiClient.patch(`${ENDPOINT}/${id}/seo`, seoData);
+    return res.data.data;
+};
+
+export const bulkDeletePages = async (ids) => {
+    const res = await apiClient.post(`${ENDPOINT}/bulk-delete`, { ids });
+    return res.data;
+};
+
+export const bulkPublishPages = async (ids, isPublished) => {
+    const res = await apiClient.post(`${ENDPOINT}/bulk-publish`, {
+        ids,
+        isPublished,
+    });
+    return res.data;
 };

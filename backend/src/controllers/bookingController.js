@@ -348,3 +348,35 @@ export const deleteBooking = async (req, res) => {
         res.status(500).json({ msg: "Failed to delete booking" });
     }
 };
+
+export const updateBooking = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { contact, passengers, pickupAddress, dropoffAddress, vehicleType, luggage, datetime, status, pricing } = req.body;
+
+        const booking = await Booking.findById(id);
+        if (!booking) {
+            return res.status(404).json({ msg: "Booking not found" });
+        }
+
+        if (contact) booking.contact = { ...booking.contact, ...contact };
+        if (passengers) booking.passengers = passengers;
+        if (pickupAddress) booking.pickupAddress = pickupAddress;
+        if (dropoffAddress) booking.dropoffAddress = dropoffAddress;
+        if (vehicleType) booking.vehicleType = vehicleType;
+        if (luggage) booking.luggage = luggage;
+        if (datetime) booking.datetime = datetime;
+        if (status) booking.status = status;
+        if (pricing) booking.pricing = { ...booking.pricing, ...pricing };
+
+        await booking.save();
+
+        res.status(200).json({ 
+            success: true, 
+            booking 
+        });
+    } catch (error) {
+        console.error("Error updating booking:", error);
+        res.status(500).json({ msg: "Failed to update booking" });
+    }
+};

@@ -1,6 +1,18 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { authApi } from "./appclient.js";
+import { authApi } from "./frontendmiddleware/appclient";
+
+
+const setCookie = (name, value, days = 7) => {
+    if (typeof window === "undefined") return;
+    const expires = new Date(Date.now() + days * 864e5).toUTCString();
+    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+};
+
+const deleteCookie = (name) => {
+    if (typeof window === "undefined") return;
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+};
 
 export const useAuth = (onAuthChange) => {
     const router = useRouter();
@@ -21,6 +33,9 @@ export const useAuth = (onAuthChange) => {
             localStorage.removeItem("user");
             sessionStorage.clear();
 
+            deleteCookie("accessToken");
+            deleteCookie("refreshToken");
+
             onAuthChange?.(null);
             router.push("/");
             router.refresh();
@@ -35,15 +50,15 @@ export const useAuth = (onAuthChange) => {
 
             try {
                 const response = await authApi.login(email, password);
-                // authApi.login returns response.data (the body),
-                // which is { success, data: { user, accessToken, refreshToken } }
-                const { data } = response;
+                const { user, accessToken, refreshToken } = response.data.data;
 
-                localStorage.setItem("accessToken", data.accessToken);
-                localStorage.setItem("refreshToken", data.refreshToken);
-                localStorage.setItem("user", JSON.stringify(data.user));
+                localStorage.setItem("accessToken", accessToken);
+                localStorage.setItem("refreshToken", refreshToken);
+                localStorage.setItem("user", JSON.stringify(user));
+                setCookie("accessToken", accessToken);
+                setCookie("refreshToken", refreshToken);
 
-                onAuthChange?.(data.user);
+                onAuthChange?.(user);
                 return { success: true };
             } catch (err) {
                 const message = err.response?.data?.message || "Login failed";

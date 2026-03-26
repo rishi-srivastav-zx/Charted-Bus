@@ -69,15 +69,13 @@ export default function LoginPopup({ onLogin, onClose }) {
     const [showPassword, setShowPassword] = useState(false);
     const [selectedRole, setSelectedRole] = useState(UserRole.SUPER_ADMIN);
     const { login, isLoading, error } = useAuth(onLogin);
-    const router = useRouter(); // Import needed from next/navigation
+    const router = useRouter();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         const res = await login(email, password);
 
         if (res.success && !onLogin) {
-            // Standalone page usage - need to redirect manually
-            // The user role check should probably match the dashboard access rules
             router.push("/dashboard");
         }
     };

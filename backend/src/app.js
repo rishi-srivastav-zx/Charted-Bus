@@ -14,9 +14,17 @@ const app = express();
 app.use(
     cors({
         origin: process.env.CLIENT_URL || "http://localhost:3000",
-        credentials: true, 
+        credentials: true,
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-        allowedHeaders: ["Content-Type", "Authorization"],
+        allowedHeaders: [
+            "Origin",
+            "X-Requested-With",
+            "Content-Type",
+            "Accept",
+            "Authorization",
+            "Cache-Control",
+            "Pragma",
+        ],
     }),
 );
 

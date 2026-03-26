@@ -8,6 +8,7 @@ import {
     updateBus,
     deleteBus,
     uploadImages,
+    getAllBusesAdmin,
 } from "../controllers/busController.js";
 import { validateQuery } from "../middlewares/validation.js";   
 
@@ -24,6 +25,13 @@ router.get("/",validateQuery, getAllBuses);
 router.get("/search",validateQuery, searchBuses);
 router.get("/popular",validateQuery, getPopularBuses);
 router.get("/:id",validateQuery, getBusById);
+
+/* ===============================
+ADMIN ROUTES
+================================ */
+
+// Get all buses (admin only)
+router.get("/admin/all", protect, restrictTo("admin", "superadmin"), getAllBusesAdmin);
 
 /* ===============================
 PROTECTED ROUTES

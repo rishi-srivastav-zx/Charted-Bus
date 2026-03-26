@@ -24,7 +24,7 @@ import { ApprovalsView } from "@/components/superadmindashboard/approvals";
 import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 import { Sidebar } from "@/components/superadmindashboard/sidebar";
 import LandingPages from "@/components/superadmindashboard/landing-page";
-import LeadPage from "@/components/superadmindashboard/leadpage";
+import LeadPage from "@/components/superadmindashboard/leadpage/leaddashboard";
 
 function DashboardContent() {
     const router = useRouter();

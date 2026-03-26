@@ -1,13 +1,10 @@
-import jwt from "jsonwebtoken";
 import User from "../models/user.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 
-// Protect routes - verify JWT
 const protect = async (req, res, next) => {
     try {
         let token;
 
-        // Get token from header or cookie
         if (req.headers.authorization?.startsWith("Bearer")) {
             token = req.headers.authorization.split(" ")[1];
         } else if (req.cookies?.accessToken) {
@@ -22,12 +19,11 @@ const protect = async (req, res, next) => {
         }
 
         try {
-            // Verify token
             const decoded = verifyAccessToken(token);
 
-            // Get user from token
             const user = await User.findById(decoded.userId).select(
                 "+passwordChangedAt",
+                
             );
 
             if (!user) {
@@ -37,7 +33,6 @@ const protect = async (req, res, next) => {
                 });
             }
 
-            // Check if user is active
             if (!user.isActive) {
                 return res.status(401).json({
                     success: false,
@@ -45,7 +40,6 @@ const protect = async (req, res, next) => {
                 });
             }
 
-            // Check if password was changed after token was issued
             if (user.changedPasswordAfter(decoded.iat)) {
                 return res.status(401).json({
                     success: false,
@@ -53,7 +47,6 @@ const protect = async (req, res, next) => {
                 });
             }
 
-            // Attach user to request
             req.user = user;
             next();
         } catch (error) {
@@ -67,7 +60,6 @@ const protect = async (req, res, next) => {
     }
 };
 
-// Restrict to specific roles
 const restrictTo = (...roles) => {
     return (req, res, next) => {
         if (!roles.includes(req.user.role) && req.user.role !== "superadmin") {
@@ -80,7 +72,6 @@ const restrictTo = (...roles) => {
     };
 };
 
-// Check specific permissions
 const requirePermission = (...permissions) => {
     return (req, res, next) => {
         const userPermissions = req.user.permissions || [];
@@ -99,7 +90,6 @@ const requirePermission = (...permissions) => {
     };
 };
 
-// Super Admin only
 const superAdminOnly = (req, res, next) => {
     if (req.user.role !== "superadmin") {
         return res.status(403).json({

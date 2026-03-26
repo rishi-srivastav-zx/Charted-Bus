@@ -69,6 +69,26 @@ export async function getAllBuses(req, res) {
 }
 
 /* ======================================================
+GET ALL BUSES (ADMIN - NO PAGINATION)
+====================================================== */
+export async function getAllBusesAdmin(req, res) {
+    try {
+        const buses = await Bus.find().sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: buses.length,
+            data: buses,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+}
+
+/* ======================================================
 GET BUS BY ID
 ====================================================== */
 export async function getBusById(req, res) {

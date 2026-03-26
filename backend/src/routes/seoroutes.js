@@ -10,7 +10,7 @@ import {
     deletePage,
     publishPage,
 } from "../controllers/seoController.js";
-import { protect } from "../middlewares/auth.js";
+import { protect, restrictTo } from "../middlewares/auth.js";
 
 const router = express.Router();
 
@@ -18,11 +18,16 @@ const router = express.Router();
 router.get("/slug", getPageBySlug);
 
 // Admin only routes
-router.post("/", protect, createPage);
+router.post("/", protect, createPage)
 router.get("/", getAllPages);
 
 // Admin preview - any status
-router.get("/preview", protect, previewPageBySlug);
+router.get(
+    "/preview",
+    protect,
+    restrictTo("admin", "superadmin"),
+    previewPageBySlug,
+);
 
 // Admin only - single resource operations (MUST be last)
 router

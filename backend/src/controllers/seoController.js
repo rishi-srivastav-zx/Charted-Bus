@@ -1,13 +1,11 @@
 import { cloudinary, getDateFolder } from "../config/cloudnary.js";
 import CharterBusPage from "../models/seoSchema.js";
 
-
 const isBase64 = (str) => typeof str === "string" && str.startsWith("data:");
-
 
 const uploadBase64Image = async (value, folder, publicId) => {
     if (!value) return "";
-    if (!isBase64(value)) return value; 
+    if (!isBase64(value)) return value;
 
     const result = await cloudinary.uploader.upload(value, {
         folder: `${folder}/${getDateFolder()}`,
@@ -19,13 +17,12 @@ const uploadBase64Image = async (value, folder, publicId) => {
     return result.secure_url;
 };
 
-
 const deleteBySecureUrl = async (secureUrl) => {
     if (!secureUrl || isBase64(secureUrl)) return;
     try {
-        const afterUpload = secureUrl.split("/upload/")[1]; 
-        const withoutVersion = afterUpload.replace(/^v\d+\//, ""); 
-        const publicId = withoutVersion.replace(/\.[^/.]+$/, ""); 
+        const afterUpload = secureUrl.split("/upload/")[1];
+        const withoutVersion = afterUpload.replace(/^v\d+\//, "");
+        const publicId = withoutVersion.replace(/\.[^/.]+$/, "");
 
         await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
     } catch (err) {
@@ -49,7 +46,6 @@ const processHeroImages = async (hero, slug) => {
     };
 };
 
-
 const processTestimonialImages = async (testimonials, slug) => {
     if (!testimonials?.items?.length) return testimonials;
 
@@ -66,7 +62,6 @@ const processTestimonialImages = async (testimonials, slug) => {
     return { ...testimonials, items };
 };
 
-
 const processSeoImages = async (seo, slug) => {
     if (!seo) return seo;
     return {
@@ -79,7 +74,6 @@ const processSeoImages = async (seo, slug) => {
     };
 };
 
-
 const processAllImages = async (body, slug) => {
     const [hero, testimonials, seo] = await Promise.all([
         processHeroImages(body.hero, slug),
@@ -89,20 +83,17 @@ const processAllImages = async (body, slug) => {
     return { ...body, hero, testimonials, seo };
 };
 
-
 const normaliseFaqItems = (items = []) =>
     items.map(({ q, a, question, answer }) => ({
         question: question ?? q ?? "",
         answer: answer ?? a ?? "",
     }));
 
-
 const normaliseTestimonials = (items = []) =>
     items.map(({ rating, ...rest }) => ({
         ...rest,
         rating: Number(rating) || 5,
     }));
-
 
 const buildDoc = (body) => {
     const {
@@ -133,7 +124,7 @@ const buildDoc = (body) => {
             canonical_url: seo.canonical_url ?? "",
             og_title: seo.og_title ?? "",
             og_description: seo.og_description ?? "",
-            og_image: seo.og_image ?? "", 
+            og_image: seo.og_image ?? "",
         };
     }
 
@@ -148,8 +139,8 @@ const buildDoc = (body) => {
         doc.hero = {
             heading: hero.heading ?? "",
             subtext: hero.subtext ?? "",
-            heroImage: hero.heroImage ?? "", 
-            description: hero.description ?? "",    
+            heroImage: hero.heroImage ?? "",
+            description: hero.description ?? "",
         };
     }
 
@@ -210,13 +201,12 @@ const buildDoc = (body) => {
     return doc;
 };
 
-
 export const createPage = async (req, res) => {
     try {
         const slug = req.body.slug?.trim();
         const processed = await processAllImages(req.body, slug);
         const doc = buildDoc(processed);
-        
+
         doc.status = "Draft";
 
         const page = new CharterBusPage(doc);
@@ -229,19 +219,16 @@ export const createPage = async (req, res) => {
                 .status(400)
                 .json({ success: false, message: err.message });
         if (err.code === 11000)
-            return res
-                .status(409)
-                .json({
-                    success: false,
-                    message: "A page with this slug already exists.",
-                });
+            return res.status(409).json({
+                success: false,
+                message: "A page with this slug already exists.",
+            });
         console.error("[createPage]", err);
         return res
             .status(500)
             .json({ success: false, message: "Server error" });
     }
 };
-
 
 export const getAllPages = async (req, res) => {
     try {
@@ -259,7 +246,6 @@ export const getAllPages = async (req, res) => {
     }
 };
 
-
 export const publishPage = async (req, res) => {
     try {
         const { id } = req.params;
@@ -272,16 +258,19 @@ export const publishPage = async (req, res) => {
         );
 
         if (!page) {
-            return res.status(404).json({ success: false, message: "Page not found" });
+            return res
+                .status(404)
+                .json({ success: false, message: "Page not found" });
         }
 
         return res.status(200).json({ success: true, data: page });
     } catch (err) {
         console.error("[publishPage]", err);
-        return res.status(500).json({ success: false, message: "Server error" });
+        return res
+            .status(500)
+            .json({ success: false, message: "Server error" });
     }
 };
-
 
 export const getPageById = async (req, res) => {
     try {
@@ -299,7 +288,6 @@ export const getPageById = async (req, res) => {
     }
 };
 
-
 export const getPageBySlug = async (req, res) => {
     try {
         const slug = req.query.slug;
@@ -309,7 +297,10 @@ export const getPageBySlug = async (req, res) => {
                 message: "Slug parameter is required",
             });
         }
-        const page = await CharterBusPage.findOne({ slug, status: "Published" });
+        const page = await CharterBusPage.findOne({
+            slug,
+            status: "Published",
+        });
         if (!page)
             return res
                 .status(404)
@@ -323,11 +314,18 @@ export const getPageBySlug = async (req, res) => {
     }
 };
 
-// Admin only - preview any page including drafts
 export const previewPageBySlug = async (req, res) => {
     try {
-        // Check if user is admin
-        if (!req.user || req.user.role !== "admin") {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Authentication required",
+            });
+        }
+
+        const allowedRoles = ["admin", "superadmin"];
+
+        if (!req.user || !allowedRoles.includes(req.user.role)) {
             return res.status(403).json({
                 success: false,
                 message: "Access denied. Admin only.",
@@ -342,7 +340,11 @@ export const previewPageBySlug = async (req, res) => {
             });
         }
 
-        const page = await CharterBusPage.findOne({ slug });
+        const decodedSlug = decodeURIComponent(slug);
+
+        const page = await CharterBusPage.findOne({
+            slug: decodedSlug,
+        });
 
         if (!page) {
             return res.status(404).json({
@@ -364,7 +366,6 @@ export const previewPageBySlug = async (req, res) => {
         });
     }
 };
-
 
 export const updatePage = async (req, res) => {
     try {
@@ -388,19 +389,16 @@ export const updatePage = async (req, res) => {
                 .status(400)
                 .json({ success: false, message: err.message });
         if (err.code === 11000)
-            return res
-                .status(409)
-                .json({
-                    success: false,
-                    message: "A page with this slug already exists.",
-                });
+            return res.status(409).json({
+                success: false,
+                message: "A page with this slug already exists.",
+            });
         console.error("[updatePage]", err);
         return res
             .status(500)
             .json({ success: false, message: "Server error" });
     }
 };
-
 
 export const patchPage = async (req, res) => {
     try {
@@ -427,19 +425,16 @@ export const patchPage = async (req, res) => {
                 .status(400)
                 .json({ success: false, message: err.message });
         if (err.code === 11000)
-            return res
-                .status(409)
-                .json({
-                    success: false,
-                    message: "A page with this slug already exists.",
-                });
+            return res.status(409).json({
+                success: false,
+                message: "A page with this slug already exists.",
+            });
         console.error("[patchPage]", err);
         return res
             .status(500)
             .json({ success: false, message: "Server error" });
     }
 };
-
 
 export const deletePage = async (req, res) => {
     try {
