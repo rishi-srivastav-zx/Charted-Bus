@@ -1,5 +1,5 @@
 "use client";
-import React, { useState,useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
     CheckCircle2,
     Bus,
@@ -71,42 +71,135 @@ const FLEET = [
 ];
 
 const AMENITIES = [
-    { icon: Wifi, label: "Free Wi-Fi", desc: "Stay connected on the go with high-speed internet" },
-    { icon: Battery, label: "Power Outlets", desc: "USB and standard outlets at every seat" },
-    { icon: Wind, label: "Climate Control", desc: "Individual air conditioning zones" },
-    { icon: Volume2, label: "PA System", desc: "Built-in microphone for announcements" },
-    { icon: Coffee, label: "Refreshment Area", desc: "Mini fridge and cup holders on select models" },
-    { icon: Shield, label: "Safety Tech", desc: "GPS tracking, dash cams, and lane assist" },
+    {
+        icon: Wifi,
+        label: "Free Wi-Fi",
+        desc: "Stay connected on the go with high-speed internet",
+    },
+    {
+        icon: Battery,
+        label: "Power Outlets",
+        desc: "USB and standard outlets at every seat",
+    },
+    {
+        icon: Wind,
+        label: "Climate Control",
+        desc: "Individual air conditioning zones",
+    },
+    {
+        icon: Volume2,
+        label: "PA System",
+        desc: "Built-in microphone for announcements",
+    },
+    {
+        icon: Coffee,
+        label: "Refreshment Area",
+        desc: "Mini fridge and cup holders on select models",
+    },
+    {
+        icon: Shield,
+        label: "Safety Tech",
+        desc: "GPS tracking, dash cams, and lane assist",
+    },
 ];
 
 const HOW_IT_WORKS = [
-    { step: "01", title: "Request a Quote", desc: "Fill out our simple online form or call us directly. Tell us your destination, group size, date, and any special requirements. We respond within 2 hours." },
-    { step: "02", title: "Get a Custom Plan", desc: "Our transportation specialists craft a tailored itinerary and pricing package. We'll suggest the ideal vehicle size and route to maximize comfort and value." },
-    { step: "03", title: "Confirm & Relax", desc: "Review your quote, sign the agreement, and secure your booking with a deposit. We handle all the logistics — you just show up and enjoy the ride." },
+    {
+        step: "01",
+        title: "Request a Quote",
+        desc: "Fill out our simple online form or call us directly. Tell us your destination, group size, date, and any special requirements. We respond within 2 hours.",
+    },
+    {
+        step: "02",
+        title: "Get a Custom Plan",
+        desc: "Our transportation specialists craft a tailored itinerary and pricing package. We'll suggest the ideal vehicle size and route to maximize comfort and value.",
+    },
+    {
+        step: "03",
+        title: "Confirm & Relax",
+        desc: "Review your quote, sign the agreement, and secure your booking with a deposit. We handle all the logistics — you just show up and enjoy the ride.",
+    },
 ];
 
 const DEFAULT_SERVICES = [
-    { icon: Briefcase, title: "Corporate Events", desc: "Impress clients and ensure your team arrives on time for conferences, meetings, and airport transfers." },
-    { icon: Heart, title: "Wedding Transportation", desc: "Keep your celebration seamless with safe, elegant shuttle service between venues." },
-    { icon: GraduationCap, title: "School Field Trips", desc: "Safe and educational travel for students and faculty." },
-    { icon: Trophy, title: "Sports Team Travel", desc: "Spacious storage for equipment and ergonomic seating." },
-    { icon: Church, title: "Religious Groups", desc: "Reliable group transit for retreats and community events." },
-    { icon: Camera, title: "Private Tours", desc: "Explore the city's hidden gems with a personalized itinerary." },
+    {
+        icon: Briefcase,
+        title: "Corporate Events",
+        desc: "Impress clients and ensure your team arrives on time for conferences, meetings, and airport transfers.",
+    },
+    {
+        icon: Heart,
+        title: "Wedding Transportation",
+        desc: "Keep your celebration seamless with safe, elegant shuttle service between venues.",
+    },
+    {
+        icon: GraduationCap,
+        title: "School Field Trips",
+        desc: "Safe and educational travel for students and faculty.",
+    },
+    {
+        icon: Trophy,
+        title: "Sports Team Travel",
+        desc: "Spacious storage for equipment and ergonomic seating.",
+    },
+    {
+        icon: Church,
+        title: "Religious Groups",
+        desc: "Reliable group transit for retreats and community events.",
+    },
+    {
+        icon: Camera,
+        title: "Private Tours",
+        desc: "Explore the city's hidden gems with a personalized itinerary.",
+    },
 ];
 
 const DEFAULT_TESTIMONIALS = [
-    { name: "Sarah M.", role: "HR Director, Pacific Tech", text: "Professionalism is unmatched. Highly recommend!", rating: 5 },
-    { name: "James K.", role: "Wedding Planner", text: "Transportation logistics made easy. The buses are gorgeous.", rating: 5 },
-    { name: "Coach Rivera", role: "Varsity Football, Lincoln High", text: "Getting kids across town is now a non-event. Always on time.", rating: 5 },
+    {
+        name: "Sarah M.",
+        role: "HR Director, Pacific Tech",
+        text: "Professionalism is unmatched. Highly recommend!",
+        rating: 5,
+    },
+    {
+        name: "James K.",
+        role: "Wedding Planner",
+        text: "Transportation logistics made easy. The buses are gorgeous.",
+        rating: 5,
+    },
+    {
+        name: "Coach Rivera",
+        role: "Varsity Football, Lincoln High",
+        text: "Getting kids across town is now a non-event. Always on time.",
+        rating: 5,
+    },
 ];
 
 const DEFAULT_FAQS = [
-    { q: "How much does a charter bus rental cost?", a: "Pricing depends on several factors including bus type, travel distance, and duration. Request a free quote for a precise estimate tailored to your event." },
-    { q: "How far in advance should I book my bus?", a: "We recommend booking at least 3–6 months in advance for peak seasons. However, we can often accommodate last-minute requests." },
-    { q: "What amenities are included in the modern fleet?", a: "Our fleet includes reclining seats, air conditioning, Wi-Fi, power outlets, and PA systems. Specific amenities vary by vehicle size." },
-    { q: "Is a professional driver included in the rental?", a: "Yes, absolutely. Every rental includes a licensed, experienced, and background-checked professional driver." },
-    { q: "Can you handle multi-stop or multi-day itineraries?", a: "Absolutely. We specialize in complex logistics, including multi-stop itineraries, multi-day conferences, and tours." },
-    { q: "What is your cancellation policy?", a: "We understand plans change. Cancellations made 30+ days before the trip receive a full deposit refund." },
+    {
+        q: "How much does a charter bus rental cost?",
+        a: "Pricing depends on several factors including bus type, travel distance, and duration. Request a free quote for a precise estimate tailored to your event.",
+    },
+    {
+        q: "How far in advance should I book my bus?",
+        a: "We recommend booking at least 3–6 months in advance for peak seasons. However, we can often accommodate last-minute requests.",
+    },
+    {
+        q: "What amenities are included in the modern fleet?",
+        a: "Our fleet includes reclining seats, air conditioning, Wi-Fi, power outlets, and PA systems. Specific amenities vary by vehicle size.",
+    },
+    {
+        q: "Is a professional driver included in the rental?",
+        a: "Yes, absolutely. Every rental includes a licensed, experienced, and background-checked professional driver.",
+    },
+    {
+        q: "Can you handle multi-stop or multi-day itineraries?",
+        a: "Absolutely. We specialize in complex logistics, including multi-stop itineraries, multi-day conferences, and tours.",
+    },
+    {
+        q: "What is your cancellation policy?",
+        a: "We understand plans change. Cancellations made 30+ days before the trip receive a full deposit refund.",
+    },
 ];
 
 // --- Animation Variants ---
@@ -116,19 +209,41 @@ const containerVariants = {
 };
 const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } },
+    visible: {
+        y: 0,
+        opacity: 1,
+        transition: { type: "spring", stiffness: 100 },
+    },
 };
 
 // --- Sub-Components ---
 const SectionHeading = ({ title, subtitle, light = false }) => (
-    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-16">
-        <h2 className={`text-3xl md:text-4xl font-bold mb-4 ${light ? "text-white" : "text-gray-900"}`}>{title}</h2>
-        {subtitle && <p className={`max-w-2xl mx-auto text-lg ${light ? "text-orange-100" : "text-gray-500"}`}>{subtitle}</p>}
+    <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className="text-center mb-16"
+    >
+        <h2
+            className={`text-3xl md:text-4xl font-bold mb-4 ${light ? "text-white" : "text-gray-900"}`}
+        >
+            {title}
+        </h2>
+        {subtitle && (
+            <p
+                className={`max-w-2xl mx-auto text-lg ${light ? "text-orange-100" : "text-gray-500"}`}
+            >
+                {subtitle}
+            </p>
+        )}
     </motion.div>
 );
 
 const ServiceCard = ({ icon: Icon, title, desc }) => (
-    <motion.div variants={itemVariants} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-orange-100 transition-all group cursor-pointer">
+    <motion.div
+        variants={itemVariants}
+        className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-orange-100 transition-all group cursor-pointer"
+    >
         <div className="w-14 h-14 bg-orange-50 rounded-xl flex items-center justify-center mb-6 group-hover:bg-orange-500 transition-colors">
             <Icon className="w-7 h-7 text-orange-500 group-hover:text-white" />
         </div>
@@ -139,15 +254,31 @@ const ServiceCard = ({ icon: Icon, title, desc }) => (
 
 const FAQItem = ({ question, answer, isOpen, onClick }) => (
     <div className="border border-gray-200 rounded-xl bg-white overflow-hidden mb-4 hover:border-orange-200 transition-colors">
-        <button onClick={onClick} className="w-full flex justify-between items-center p-6 text-left">
-            <span className="font-bold text-gray-900 text-lg pr-4">{question}</span>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isOpen ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}>
-                {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        <button
+            onClick={onClick}
+            className="w-full flex justify-between items-center p-6 text-left"
+        >
+            <span className="font-bold text-gray-900 text-lg pr-4">
+                {question}
+            </span>
+            <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isOpen ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}
+            >
+                {isOpen ? (
+                    <ChevronUp className="w-5 h-5" />
+                ) : (
+                    <ChevronDown className="w-5 h-5" />
+                )}
             </div>
         </button>
         <AnimatePresence>
             {isOpen && (
-                <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="px-6 pb-6">
+                <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height: "auto" }}
+                    exit={{ height: 0 }}
+                    className="px-6 pb-6"
+                >
                     <p className="text-gray-600 leading-relaxed">{answer}</p>
                 </motion.div>
             )}
@@ -158,9 +289,10 @@ const FAQItem = ({ question, answer, isOpen, onClick }) => (
 // --- Main Page ---
 export default function CharterBusLanding({ data }) {
     const [openFaqIndex, setOpenFaqIndex] = useState(0);
-    const toggleFaq = (index) => setOpenFaqIndex(openFaqIndex === index ? -1 : index);
+    const toggleFaq = (index) =>
+        setOpenFaqIndex(openFaqIndex === index ? -1 : index);
     const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
-    const [vehicles, setVehicles] = useState([]); 
+    const [vehicles, setVehicles] = useState([]);
 
     // Dynamic data from database
     const pageData = data || {};
@@ -170,30 +302,36 @@ export default function CharterBusLanding({ data }) {
     const testimonialsData = pageData.testimonials || {};
     const faqData = pageData.faq || {};
 
-   async function fetchVehicles() {
-       try {
-           const res = await getAllBuses();
-           return res?.data?.data ?? res?.data ?? [];
-       } catch (error) {
-           console.error("Error fetching vehicles:", error);
-           return [];
-       }
-   }
+    async function fetchVehicles() {
+        try {
+            const res = await getAllBuses();
+            return res?.data?.data ?? res?.data ?? [];
+        } catch (error) {
+            console.error("Error fetching vehicles:", error);
+            return [];
+        }
+    }
 
-     useEffect(() => {
-         async function loadData() {
-             const data = await fetchVehicles();
-             setVehicles(data);
-         }
-         loadData();
-     }, []);
-
-
+    useEffect(() => {
+        async function loadData() {
+            const data = await fetchVehicles();
+            setVehicles(data);
+        }
+        loadData();
+    }, []);
 
     // Dynamic sections with fallbacks
-    const services = servicesData.items?.filter(Boolean)?.length > 0 ? servicesData.items : DEFAULT_SERVICES;
-    const testimonials = testimonialsData.items?.filter(Boolean)?.length > 0 ? testimonialsData.items : DEFAULT_TESTIMONIALS;
-    const faqs = faqData.items?.filter(item => item && (item.q || item.question)) || DEFAULT_FAQS;
+    const services =
+        servicesData.items?.filter(Boolean)?.length > 0
+            ? servicesData.items
+            : DEFAULT_SERVICES;
+    const testimonials =
+        testimonialsData.items?.filter(Boolean)?.length > 0
+            ? testimonialsData.items
+            : DEFAULT_TESTIMONIALS;
+    const faqs =
+        faqData.items?.filter((item) => item && (item.q || item.question)) ||
+        DEFAULT_FAQS;
 
     return (
         <div className="min-h-screen bg-white font-sans text-gray-900">
@@ -249,12 +387,12 @@ export default function CharterBusLanding({ data }) {
                                 <Zap className="w-4 h-4" /> #1 Rated Charter
                                 Service
                             </div>
-                            <h1 className="text-5xl lg:text-5xl font-extrabold leading-[1.1] mb-6 text-gray-900">
+                            <h2 className="text-5xl lg:text-5xl font-extrabold leading-[1.1] mb-6 text-gray-900">
                                 Your Complete Guide to <br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">
                                     {hero.heading || "Charter Bus Rental"}
                                 </span>
-                            </h1>
+                            </h2>
                             <p className="text-gray-600 text-lg leading-relaxed mb-4">
                                 {pageData.guide?.bodyHtml ||
                                     "Navigating the sprawl of Los Angeles is effortless when you leave the driving to us. Whether you're coordinating a multi-day corporate summit or a scenic tour, our fleet offers the perfect blend of luxury and reliability."}

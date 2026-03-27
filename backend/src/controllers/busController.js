@@ -93,15 +93,28 @@ GET BUS BY ID
 ====================================================== */
 export async function getBusById(req, res) {
     try {
-        const bus = await Bus.findById(req.params.id).populate(
-            "operator",
-            "name email",
-        );
+        const { id } = req.params;
+        
+        if (!id) {
+            return res.status(400).json({
+                success: false,
+                message: "Bus ID is required"
+            });
+        }
+
+        // Try to find by _id first, then by id field
+        let bus = await Bus.findById(id).populate("operator", "name email");
+        
+        // If not found, try by custom id field
+        if (!bus) {
+            bus = await Bus.findOne({ id: id }).populate("operator", "name email");
+        }
 
         if (!bus) {
-            return res
-                .status(404)
-                .json({ success: false, message: "Bus not found" });
+            return res.status(404).json({
+                success: false,
+                message: "Bus not found"
+            });
         }
 
         res.status(200).json({
@@ -109,42 +122,10 @@ export async function getBusById(req, res) {
             data: bus,
         });
     } catch (error) {
+        console.error("GetBusById error:", error);
         res.status(500).json({
             success: false,
-            message: error.message,
-        });
-    }
-}
-
-/* ======================================================
-SEARCH BUSES
-====================================================== */
-export async function searchBuses(req, res) {
-    try {
-        const { q, passengers } = req.query;
-
-        const query = {
-            $or: [
-                { name: { $regex: q, $options: "i" } },
-                { category: { $regex: q, $options: "i" } },
-            ],
-        };
-
-        if (passengers) {
-            query.seatCapacity = { $gte: parseInt(passengers) };
-        }
-
-        const buses = await Bus.find(query).limit(20);
-
-        res.status(200).json({
-            success: true,
-            count: buses.length,
-            data: buses,
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message,
+            message: error.message || "Server error",
         });
     }
 }

@@ -101,10 +101,7 @@ export default function LoginPopup({ onLogin, onClose }) {
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-2xl font-black tracking-tighter text-white uppercase">
-                                    FREEDOM
-                                </span>
-                                <span className="text-[10px] font-semibold tracking-widest text-red-600">
-                                    CHARTER BUS USA
+                                    CHARTER BUS
                                 </span>
                             </div>
                         </div>
@@ -184,20 +181,37 @@ export default function LoginPopup({ onLogin, onClose }) {
                 <div className="max-w-[400px] mx-auto w-full">
                     {/* Header */}
                     <div className="mb-10 text-center md:text-left">
-                        <h2 className="flex items-start gap-2 text-3xl font-bold text-neutral-900 mb-4 ml-10">
-                            <span>Login to</span>
-                            <span className="relative flex flex-col leading-none">
-                                <span className="text-2xl font-black tracking-tighter text-black uppercase">
-                                    FREEDOM
-                                </span>
-                                <span className="ml-3 text-[10px] font-semibold tracking-widest text-red-600 uppercase">
-                                    CHARTER BUS USA
-                                </span>
-                            </span>
-                        </h2>
-                        <p className="text-sm text-neutral-500 ml-12">
-                            Access your enterprise dashboard
-                        </p>
+                        <div className="flex flex-col items-center gap-3 md:flex-row md:items-center md:gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-neutral-900 to-neutral-700 shadow-lg">
+                                <svg
+                                    className="h-7 w-7 text-white"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0121 18.382V7.618a1 1 0 01-.553-.894L15 4m0 13V4m0 0L9 7"
+                                    />
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-neutral-900">
+                                    <span className="font-medium text-neutral-600">
+                                        Login
+                                    </span>{" "}
+                                    <span className="text-neutral-400">|</span>{" "}
+                                    <span className="font-black tracking-tight uppercase">
+                                        Charter Bus
+                                    </span>
+                                </h1>
+                                <p className="text-sm text-neutral-500 mt-0.5">
+                                    Enterprise transportation management
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Error Banner */}
@@ -348,7 +362,7 @@ export default function LoginPopup({ onLogin, onClose }) {
                         </div>
                     </div>
 
-                    {/* Google SSO */}
+                    {/* Google SSO
                     <button className="w-full h-14 rounded-2xl border-2 border-neutral-100 flex items-center justify-center gap-3 hover:bg-neutral-50 transition-all group active:scale-[0.98]">
                         <img
                             src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png"
@@ -358,7 +372,7 @@ export default function LoginPopup({ onLogin, onClose }) {
                         <span className="text-sm font-bold text-neutral-700">
                             Continue with Google
                         </span>
-                    </button>
+                    </button> */}
 
                     {/* Footer */}
                     <p className="text-[11px] text-center text-neutral-400 leading-relaxed px-4 mt-10">

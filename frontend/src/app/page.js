@@ -8,7 +8,7 @@ import Navbar from '../components/header';
 import Hero from '../components/hero';
 
 
-const BusTypes = dynamic(() => import('../components/bustype'), {
+const BusTypes = dynamic(() => import('./BusPage/components/bustype'), {
   loading: () => <SectionSkeleton title="Our Fleet" />,
   ssr: true
 });

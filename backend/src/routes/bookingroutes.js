@@ -9,7 +9,7 @@ import {
     cancelBooking,
     getAllBookings,
     deleteBooking,
-    updateBooking,  
+    updateBooking,
 } from "../controllers/bookingController.js";
 
 const router = express.Router();
@@ -23,6 +23,8 @@ router.get("/confirmation/:confirmationNumber", getBookingByConfirmation);
 router.patch("/:bookingId/cancel", cancelBooking);
 router.get("/", getAllBookings);
 router.delete("/:id", deleteBooking);
-router.put("/:id", updateBooking);  
+router.put("/:id", updateBooking);
 
 export default router;
+
+

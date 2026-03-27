@@ -1,7 +1,6 @@
 import { Router } from "express";
 import {
     getAllBuses,
-    searchBuses,
     getPopularBuses,
     getBusById,
     createBus,
@@ -10,7 +9,7 @@ import {
     uploadImages,
     getAllBusesAdmin,
 } from "../controllers/busController.js";
-import { validateQuery } from "../middlewares/validation.js";   
+// import { validateQuery } from "../middlewares/validation.js";   
 
 import { validateBus } from "../middlewares/validation.js";
 import { protect, restrictTo } from "../middlewares/auth.js";
@@ -21,10 +20,9 @@ const router = Router();
 PUBLIC ROUTES
 ================================ */
 
-router.get("/",validateQuery, getAllBuses);
-router.get("/search",validateQuery, searchBuses);
-router.get("/popular",validateQuery, getPopularBuses);
-router.get("/:id",validateQuery, getBusById);
+router.get("/", getAllBuses);
+router.get("/popular", getPopularBuses);
+router.get("/:id", getBusById);
 
 /* ===============================
 ADMIN ROUTES
