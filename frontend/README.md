@@ -25,9 +25,7 @@ npm install
 ```
 
 ### 2. Configure Environment
-Create a `.env.local` file with the following keys:
-- `NEXT_PUBLIC_API_URL`: The backend server URL.
-- `NEXT_PUBLIC_LOCATIONIQ_KEY`: Your LocationIQ API key.
+Use the shared [local.env](file:///c:/Users/ACER/Desktop/projects/charter-bus-project/Charted-Bus/local.env) file in the project root or create a local `.env.local` file with the required keys (API URL, LocationIQ, etc.).
 
 ### 3. Run Development Server
 ```bash

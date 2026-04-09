@@ -83,14 +83,14 @@ cd Charted-Bus
 cd backend
 npm install
 ```
-Create a `.env` file in the `backend` folder (refer to `.env.example`) and add your credentials.
+Configure your environment using the [local.env](file:///c:/Users/ACER/Desktop/projects/charter-bus-project/Charted-Bus/local.env) file in the project root.
 
 ### 3. Frontend Setup
 ```bash
 cd ../frontend
 npm install
 ```
-Create a `.env.local` file in the `frontend` folder (refer to `.env.example`) and add your API URL and keys.
+Use the shared [local.env](file:///c:/Users/ACER/Desktop/projects/charter-bus-project/Charted-Bus/local.env) file or create a `.env.local` for frontend-specific overrides.
 
 ---
 

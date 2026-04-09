@@ -25,11 +25,7 @@ npm install
 ```
 
 ### 2. Configure Environment
-Create a `.env` file (refer to `.env.example`) with:
-- `MONGO_URI`: Your MongoDB connection string.
-- `JWT_SECRET`: Secret key for token signing.
-- `CLOUDINARY_*`: Cloudinary credentials for image uploads.
-- `SMTP_*`: SMTP server details for emails.
+Configure your environment using the [local.env](file:///c:/Users/ACER/Desktop/projects/charter-bus-project/Charted-Bus/local.env) file in the project root. Ensure it contains your MongoDB URI, JWT secrets, and SMTP/Cloudinary credentials.
 
 ### 3. Run Server
 ```bash
