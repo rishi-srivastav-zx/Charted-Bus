@@ -1,5 +1,5 @@
-import Header from "@/components/header";
-import LuxCharterPage from "@/components/bookinginterfacecomponent/basicdetails";
+import Header from "../../components/header";
+import LuxCharterPage from "../../components/bookinginterfacecomponent/basicdetails";
 
 export default function BookingUniversalPage() {
     return (
