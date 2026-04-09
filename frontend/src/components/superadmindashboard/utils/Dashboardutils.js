@@ -1,6 +1,6 @@
-import { getAllBusesAdmin } from "@/services/busservices";
-import { getAllBookings } from "@/services/bookingservice";
-import { getAllPages } from "@/services/landingpage";
+import { getAllBusesAdmin } from "../../../services/busservices";
+import { getAllBookings } from "../../../services/bookingservice";
+import { getAllPages } from "../../../services/landingpage";
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 

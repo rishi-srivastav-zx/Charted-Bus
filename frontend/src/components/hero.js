@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Star, Phone, MapPin, X, Globe } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNav } from "./navigation-provider";
-import { getAllPages } from "@/services/landingpage";
+import { getAllPages } from "../services/landingpage";
 import HeroImageSection from "./heroimagesection";
 
 const Hero = () => {

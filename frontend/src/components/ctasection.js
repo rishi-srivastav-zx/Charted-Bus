@@ -35,7 +35,7 @@ const CTASection = () => {
       <div className="max-w-5xl mx-auto px-6 text-center relative z-10">
         <h2 className="text-4xl md:text-6xl font-bold text-white mb-8">Ready to Book Your <br/><span className="text-orange-500">Charter Bus?</span></h2>
         <p className="text-white/60 text-xl mb-12 max-w-2xl mx-auto">
-          Join 50,000+ happy travelers who trust PrimeDrive for their group transportation needs.
+          Join 50,000+ happy travelers who trust CharterBus for their group transportation needs.
         </p>
         <button onClick={ () => router.push("/#home") } className="bg-orange-500 hover:bg-orange-600 text-white px-12 py-5 rounded-full font-bold text-xl transition-all shadow-2xl hover:shadow-orange-500/40">
           Get Instant Quote

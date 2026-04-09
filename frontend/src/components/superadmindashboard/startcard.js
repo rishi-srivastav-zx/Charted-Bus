@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@/app/lib/uitls';
+import { cn } from '../../app/lib/uitls';
 
   
 export const StatCard = ({ title, value, change, trend, icon, iconBg }) => (

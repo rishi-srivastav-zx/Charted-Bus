@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Menu, X, Phone, Bus, ChevronDown } from "lucide-react";
 import LoginPopup from "../app/login/page";
 import { usePathname, useRouter } from "next/navigation";
+import { BUSINESS_CONFIG } from "../app/lib/seo-cofig";
 
 // Services dropdown items
 const SERVICE_ITEMS = [
@@ -64,12 +65,16 @@ export default function Header() {
     // Close services dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (servicesRef.current && !servicesRef.current.contains(e.target)) {
+            if (
+                servicesRef.current &&
+                !servicesRef.current.contains(e.target)
+            ) {
                 setIsServicesOpen(false);
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     // Prevent body scroll when modal is open
@@ -96,7 +101,6 @@ export default function Header() {
         }
     };
 
-   
     const handleNavClick = (e, href) => {
         e.preventDefault();
         setIsMobileMenuOpen(false);
@@ -105,11 +109,9 @@ export default function Header() {
         if (href.startsWith("/#")) {
             const sectionId = href.replace("/#", "");
             if (pathname === "/") {
-                // Already on home — just scroll
                 const el = document.getElementById(sectionId);
                 if (el) el.scrollIntoView({ behavior: "smooth" });
             } else {
-                // Navigate home first, then scroll after load
                 router.push("/");
                 setTimeout(() => {
                     const el = document.getElementById(sectionId);
@@ -124,27 +126,29 @@ export default function Header() {
     return (
         <>
             <header
-                className={`fixed top-0 left-0 right-0 w-full z-40 transition-all duration-300 ${
+                className={`fixed top-0 left-0 right-0 w-full z-50 transition-all duration-300 ${
                     isScrolled
-                        ? "bg-white/90 backdrop-blur-md shadow-md py-4"
-                        : "bg-transparent py-6"
+                        ? "bg-white/95 backdrop-blur-md shadow-md py-3"
+                        : "bg-transparent py-4"
                 }`}
             >
-                <div className="max-w-8xl mx-auto px-6 flex items-center justify-between">
+                <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
                     {/* Logo */}
                     <div
-                        className="flex items-center gap-2 cursor-pointer"
+                        className="flex items-center gap-2 cursor-pointer flex-shrink-0"
                         onClick={handleLogoClick}
                     >
                         <div
-                            className={`w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center text-white transition-all ${
-                                isScrolled ? "shadow-lg" : "shadow-orange-500/30"
+                            className={`w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white transition-all flex-shrink-0 ${
+                                isScrolled
+                                    ? "shadow-lg"
+                                    : "shadow-orange-500/30"
                             }`}
                         >
-                            <Bus size={24} />
+                            <Bus className="w-5 h-5" />
                         </div>
                         <span
-                            className={`text-2xl font-bold tracking-tight transition-colors ${
+                            className={`text-xl font-bold tracking-tight transition-colors whitespace-nowrap ${
                                 isScrolled ? "text-slate-900" : "text-white"
                             }`}
                         >
@@ -161,8 +165,10 @@ export default function Header() {
                         {/* Services Dropdown */}
                         <div className="relative" ref={servicesRef}>
                             <button
-                                onClick={() => setIsServicesOpen((prev) => !prev)}
-                                className="flex items-center gap-1 hover:text-orange-500 transition-colors focus:outline-none"
+                                onClick={() =>
+                                    setIsServicesOpen((prev) => !prev)
+                                }
+                                className="flex items-center gap-1 hover:text-orange-500 transition-colors focus:outline-none whitespace-nowrap"
                                 aria-haspopup="true"
                                 aria-expanded={isServicesOpen}
                             >
@@ -174,7 +180,6 @@ export default function Header() {
                                 />
                             </button>
 
-                            {/* Dropdown Panel */}
                             {isServicesOpen && (
                                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 w-52 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-fadeInDown">
                                     <div className="py-2">
@@ -182,7 +187,12 @@ export default function Header() {
                                             <a
                                                 key={service.label}
                                                 href={service.href}
-                                                onClick={(e) => handleNavClick(e, service.href)}
+                                                onClick={(e) =>
+                                                    handleNavClick(
+                                                        e,
+                                                        service.href,
+                                                    )
+                                                }
                                                 className="flex items-center gap-3 px-4 py-3 text-slate-700 hover:bg-orange-50 hover:text-orange-500 transition-colors text-sm font-medium"
                                             >
                                                 <span className="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0" />
@@ -200,7 +210,7 @@ export default function Header() {
                                 key={item.label}
                                 href={item.href}
                                 onClick={(e) => handleNavClick(e, item.href)}
-                                className="hover:text-orange-500 transition-colors"
+                                className="hover:text-orange-500 transition-colors whitespace-nowrap"
                             >
                                 {item.label}
                             </a>
@@ -208,20 +218,20 @@ export default function Header() {
                     </nav>
 
                     {/* Desktop CTA */}
-                    <div className="hidden lg:flex items-center gap-4">
+                    <div className="hidden lg:flex items-center gap-4 flex-shrink-0">
                         <a
-                            href="tel:18005550199"
+                            href={`tel:${BUSINESS_CONFIG.telephone.replace(/[^+\d]/g, '')}`}
                             className={`flex items-center gap-2 font-semibold hover:text-orange-500 transition-colors ${
                                 isScrolled ? "text-slate-900" : "text-white"
                             }`}
                         >
                             <Phone className="w-4 h-4 text-orange-500" />
-                            1-800-555-0199
+                            {BUSINESS_CONFIG.telephone}
                         </a>
 
                         <button
                             onClick={() => setIsLoginOpen(true)}
-                            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-semibold transition-all shadow-lg hover:shadow-orange-500/30 transform hover:scale-105"
+                            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-semibold transition-all shadow-lg hover:shadow-orange-500/30 transform hover:scale-105 whitespace-nowrap"
                         >
                             Login
                         </button>
@@ -229,21 +239,19 @@ export default function Header() {
 
                     {/* Mobile Menu Button */}
                     <button
-                        className="lg:hidden p-2"
+                        className="lg:hidden p-2 -mr-2 flex-shrink-0"
                         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+                        aria-label={
+                            isMobileMenuOpen ? "Close menu" : "Open menu"
+                        }
                     >
                         {isMobileMenuOpen ? (
                             <X
-                                className={`w-6 h-6 ${
-                                    isScrolled ? "text-slate-900" : "text-white"
-                                }`}
+                                className={`w-6 h-6 ${isScrolled ? "text-slate-900" : "text-white"}`}
                             />
                         ) : (
                             <Menu
-                                className={`w-6 h-6 ${
-                                    isScrolled ? "text-slate-900" : "text-white"
-                                }`}
+                                className={`w-6 h-6 ${isScrolled ? "text-slate-900" : "text-white"}`}
                             />
                         )}
                     </button>
@@ -251,32 +259,37 @@ export default function Header() {
 
                 {/* Mobile Menu */}
                 {isMobileMenuOpen && (
-                    <div className="lg:hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur-md shadow-xl border-t border-slate-100">
-                        <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-2">
+                    <div className="lg:hidden absolute top-full left-0 w-full bg-white/98 backdrop-blur-md shadow-xl border-t border-slate-100 max-h-[calc(100vh-60px)] overflow-y-auto">
+                        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
                             {/* Mobile Services Accordion */}
-                            <div>
+                            <div className="border-b border-slate-100">
                                 <button
                                     onClick={() =>
                                         setIsMobileServicesOpen((prev) => !prev)
                                     }
-                                    className="w-full flex items-center justify-between text-lg font-semibold text-slate-800 border-b border-slate-100 pb-3 hover:text-orange-500 transition-colors"
+                                    className="w-full flex items-center justify-between text-base font-semibold text-slate-800 py-3 hover:text-orange-500 transition-colors"
                                 >
                                     Services
                                     <ChevronDown
                                         className={`w-5 h-5 transition-transform duration-200 ${
-                                            isMobileServicesOpen ? "rotate-180" : ""
+                                            isMobileServicesOpen
+                                                ? "rotate-180"
+                                                : ""
                                         }`}
                                     />
                                 </button>
 
                                 {isMobileServicesOpen && (
-                                    <div className="flex flex-col gap-1 mt-2 mb-2 pl-4 border-l-2 border-orange-300">
+                                    <div className="flex flex-col gap-1 pb-2 pl-4 border-l-2 border-orange-300">
                                         {SERVICE_ITEMS.map((service) => (
                                             <a
                                                 key={service.label}
                                                 href={service.href}
                                                 onClick={(e) =>
-                                                    handleNavClick(e, service.href)
+                                                    handleNavClick(
+                                                        e,
+                                                        service.href,
+                                                    )
                                                 }
                                                 className="py-2 text-slate-600 hover:text-orange-500 transition-colors font-medium text-sm flex items-center gap-2"
                                             >
@@ -293,19 +306,21 @@ export default function Header() {
                                 <a
                                     key={item.label}
                                     href={item.href}
-                                    onClick={(e) => handleNavClick(e, item.href)}
-                                    className="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-3 hover:text-orange-500 transition-colors"
+                                    onClick={(e) =>
+                                        handleNavClick(e, item.href)
+                                    }
+                                    className="text-base font-semibold text-slate-800 border-b border-slate-100 py-3 hover:text-orange-500 transition-colors"
                                 >
                                     {item.label}
                                 </a>
                             ))}
 
                             <a
-                                href="tel:18005550199"
-                                className="flex items-center gap-2 text-slate-900 font-bold text-lg pt-2 hover:text-orange-500 transition-colors"
+                                href={`tel:${BUSINESS_CONFIG.telephone.replace(/[^+\d]/g, '')}`}
+                                className="flex items-center gap-2 text-slate-900 font-bold text-base py-3 hover:text-orange-500 transition-colors"
                             >
                                 <Phone className="w-5 h-5 text-orange-500" />
-                                1-800-555-0199
+                                {BUSINESS_CONFIG.telephone}
                             </a>
 
                             <button
@@ -322,16 +337,16 @@ export default function Header() {
                 )}
             </header>
 
-            {/* LOGIN POPUP MODAL */}
+            {/* ── LOGIN MODAL OVERLAY ── */}
             {isLoginOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    {/* Backdrop */}
+                <div
+                    className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                    onClick={() => setIsLoginOpen(false)}
+                >
                     <div
-                        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-                        onClick={() => setIsLoginOpen(false)}
-                    />
-                    {/* Login Component */}
-                    <div className="relative z-10 w-full">
+                        className="w-full max-w-xxl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <LoginPopup
                             onLogin={handleLogin}
                             onClose={() => setIsLoginOpen(false)}

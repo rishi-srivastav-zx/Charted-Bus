@@ -23,7 +23,7 @@ import {
     ChevronRight,
     Sparkles,
 } from "lucide-react";
-import { updateBooking } from "@/services/bookingservice";
+import { updateBooking } from "../../../services/bookingservice";
 
 const EditLeadModal = ({ lead, onClose, onSave }) => {
     const [saving, setSaving] = useState(false);

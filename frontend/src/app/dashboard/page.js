@@ -17,14 +17,14 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, Suspense, useEffect } from "react";
-import { DashboardView } from "@/components/superadmindashboard/dashboard";
-import { OperatorsView } from "@/components/superadmindashboard/operator";
-import { InventoryView } from "@/components/superadmindashboard/inventory";
-import { ApprovalsView } from "@/components/superadmindashboard/approvals";
-import { useProtectedRoute } from "@/hooks/useProtectedRoute";
-import { Sidebar } from "@/components/superadmindashboard/sidebar";
-import LandingPages from "@/components/superadmindashboard/landing-page";
-import LeadPage from "@/components/superadmindashboard/leadpage/leaddashboard";
+import { DashboardView } from "../../components/superadmindashboard/dashboard";
+import { OperatorsView } from "../../components/superadmindashboard/operator";
+import { InventoryView } from "../../components/superadmindashboard/inventory";
+import { ApprovalsView } from "../../components/superadmindashboard/approvals";
+import { useProtectedRoute } from "../../hooks/useProtectedRoute";
+import { Sidebar } from "../../components/superadmindashboard/sidebar";
+import LandingPages from "../../components/superadmindashboard/landing-page";
+import LeadPage from "../../components/superadmindashboard/leadpage/leaddashboard";
 
 function DashboardContent() {
     const router = useRouter();
@@ -70,7 +70,6 @@ function DashboardContent() {
             approvals: "Pending Approvals",
             routes: "Route Management",
             calendar: "Calendar View",
-            reports: "Reports & Analytics",
         }[view] || "Dashboard";
 
     return (

@@ -49,7 +49,7 @@ export const saveBasicDetails = async (req, res) => {
         let booking;
 
         if (bookingId) {
-            booking = await Booking.findById(bookingId);
+            booking = await Booking.findOne({ _id: bookingId, isDeleted: false });
             if (!booking) {
                 return res.status(404).json({ msg: "Booking not found" });
             }
@@ -106,7 +106,7 @@ export const saveVehicleSelection = async (req, res) => {
             return res.status(400).json({ msg: "Booking ID is required" });
         }
 
-        const booking = await Booking.findById(bookingId);
+        const booking = await Booking.findOne({ _id: bookingId, isDeleted: false });
         if (!booking) {
             return res.status(404).json({ msg: "Booking not found" });
         }
@@ -144,7 +144,7 @@ export const saveContactDetails = async (req, res) => {
             return res.status(400).json({ msg: "Booking ID is required" });
         }
 
-        const booking = await Booking.findById(bookingId);
+        const booking = await Booking.findOne({ _id: bookingId, isDeleted: false });
         if (!booking) {
             return res.status(404).json({ msg: "Booking not found" });
         }
@@ -178,7 +178,7 @@ export const confirmBooking = async (req, res) => {
             return res.status(400).json({ msg: "Booking ID is required" });
         }
 
-        const booking = await Booking.findById(bookingId);
+        const booking = await Booking.findOne({ _id: bookingId, isDeleted: false });
         if (!booking) {
             return res.status(404).json({ msg: "Booking not found" });
         }
@@ -250,7 +250,7 @@ export const getBooking = async (req, res) => {
     try {
         const { bookingId } = req.params;
 
-        const booking = await Booking.findById(bookingId);
+        const booking = await Booking.findOne({ _id: bookingId, isDeleted: false });
         if (!booking) {
             return res.status(404).json({ msg: "Booking not found" });
         }
@@ -266,7 +266,7 @@ export const getBookingByConfirmation = async (req, res) => {
     try {
         const { confirmationNumber } = req.params;
 
-        const booking = await Booking.findOne({ confirmationNumber });
+        const booking = await Booking.findOne({ confirmationNumber, isDeleted: false });
         if (!booking) {
             return res.status(404).json({ msg: "Booking not found" });
         }
@@ -282,7 +282,7 @@ export const cancelBooking = async (req, res) => {
     try {
         const { bookingId } = req.params;
 
-        const booking = await Booking.findById(bookingId);
+        const booking = await Booking.findOne({ _id: bookingId, isDeleted: false });
         if (!booking) {
             return res.status(404).json({ msg: "Booking not found" });
         }
@@ -304,7 +304,7 @@ export const getAllBookings = async (req, res) => {
     try {
         const { status, page = 1, limit = 10 } = req.query;
 
-        const query = {};
+        const query = { isDeleted: false };
         if (status) {
             query.status = status;
         }
@@ -332,12 +332,15 @@ export const deleteBooking = async (req, res) => {
     try {
         const { id } = req.params;
         
-        const booking = await Booking.findById(id);
+        const booking = await Booking.findOne({ _id: id, isDeleted: false });
         if (!booking) {
             return res.status(404).json({ msg: "Booking not found" });
         }
 
-        await Booking.findByIdAndDelete(id);
+        // await Booking.findByIdAndDelete(id);
+        booking.isDeleted = true;
+        booking.deletedAt = new Date();
+        await booking.save();
 
         res.status(200).json({ 
             success: true, 
@@ -354,7 +357,7 @@ export const updateBooking = async (req, res) => {
         const { id } = req.params;
         const { contact, passengers, pickupAddress, dropoffAddress, vehicleType, luggage, datetime, status, pricing } = req.body;
 
-        const booking = await Booking.findById(id);
+        const booking = await Booking.findOne({ _id: id, isDeleted: false });
         if (!booking) {
             return res.status(404).json({ msg: "Booking not found" });
         }

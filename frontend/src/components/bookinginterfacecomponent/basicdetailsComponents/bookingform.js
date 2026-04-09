@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useNav } from "@/components/navigation-provider";
-import { saveBasicDetails } from "@/services/bookingservice";
+import { useNav } from "../../navigation-provider";
+import { saveBasicDetails } from "../../../services/bookingservice";
 import {
     ClockIcon,
     ArrowRight,

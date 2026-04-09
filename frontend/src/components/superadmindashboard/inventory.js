@@ -33,9 +33,9 @@ import {
     Trash2,
     Eye,
 } from "lucide-react";
-import { cn } from "@/app/lib/uitls";
+import { cn } from "../../app/lib/uitls";
 import BusForm from "./busform";
-import { getAllBuses, deleteBus } from "@/services/busservices";
+import { getAllBuses, deleteBus } from "../../services/busservices";
 
 async function fetchVehicles() {
     try {

@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { GripIcon, EditIcon } from "./icons";
 import { TypeToggle, inputCls } from "./formprimitives";
-import { searchLocation } from "@/services/locationService";
+import { searchLocations } from "../../../services/locationService";
 
 // ─── AddressRow ───────────────────────────────────────────────────────────────
 export default function AddressRow({
@@ -30,7 +30,7 @@ export default function AddressRow({
         setLoading(true);
         debounceRef.current = setTimeout(async () => {
             try {
-                const results = await searchLocation(query);
+                const results = await searchLocations(query);
                 setSuggestions(results || []);
                 setShowSuggestions(results?.length > 0);
             } catch (err) {
@@ -78,9 +78,6 @@ export default function AddressRow({
                         onFocus={() =>
                             suggestions.length > 0 && setShowSuggestions(true)
                         }
-                        onBlur={() =>
-                            setTimeout(() => setShowSuggestions(false), 200)
-                        }
                         placeholder={
                             type === "airport"
                                 ? "Search Airport or City *"
@@ -94,12 +91,19 @@ export default function AddressRow({
                         </div>
                     )}
                     {showSuggestions && suggestions.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 max-h-48 sm:max-h-60 overflow-y-auto">
+                        <div 
+                            className="absolute z-50 w-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 max-h-48 sm:max-h-60 overflow-y-auto"
+                            onMouseDown={(e) => e.preventDefault()}
+                        >
                             {suggestions.map((s, idx) => (
                                 <button
                                     key={idx}
-                                    onClick={() => handleSelectSuggestion(s)}
-                                    className="w-full text-left px-3 py-2 text-xs sm:text-sm hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        handleSelectSuggestion(s);
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-xs sm:text-sm hover:bg-blue-50 bg-white border-b border-slate-100 last:border-0 transition-colors"
                                 >
                                     {s.display_name}
                                 </button>

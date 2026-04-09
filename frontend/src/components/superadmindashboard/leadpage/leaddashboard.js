@@ -21,7 +21,7 @@ import {
     CheckCircle,
     DollarSign,
 } from "lucide-react";
-import { getAllBookings, deleteBooking } from "@/services/bookingservice";
+import { getAllBookings, deleteBooking } from "../../../services/bookingservice";
 import StatusBadge from "./statusbadge";
 import PaymentLinkModal from "./paymentLink";
 import LeadDetailModal from "./leadDeatils";

@@ -1,8 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { NavigationProvider } from "@/components/navigation-provider";
+import { NavigationProvider } from "../components/navigation-provider";
 import { Toaster } from "react-hot-toast";
-import { BUSINESS_CONFIG, baseMetadata } from "@/app/lib/seo-cofig";
+import { baseMetadata,BUSINESS_CONFIG } from "../app/lib/seo-cofig"; 
 
 const geistSans = Geist({
     variable: "--font-geist-sans",

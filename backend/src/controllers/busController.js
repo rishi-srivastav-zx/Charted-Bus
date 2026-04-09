@@ -21,7 +21,7 @@ export async function getAllBuses(req, res) {
             order = "desc",
         } = req.query;
 
-        const filter = {};
+        const filter = { isDeleted: false };
 
         if (category) filter.category = category;
         if (fuelType) filter.fuelType = fuelType;
@@ -73,7 +73,7 @@ GET ALL BUSES (ADMIN - NO PAGINATION)
 ====================================================== */
 export async function getAllBusesAdmin(req, res) {
     try {
-        const buses = await Bus.find().sort({ createdAt: -1 });
+        const buses = await Bus.find({ isDeleted: false }).sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,
@@ -103,11 +103,11 @@ export async function getBusById(req, res) {
         }
 
         // Try to find by _id first, then by id field
-        let bus = await Bus.findById(id).populate("operator", "name email");
+        let bus = await Bus.findOne({ _id: id, isDeleted: false }).populate("operator", "name email");
         
         // If not found, try by custom id field
         if (!bus) {
-            bus = await Bus.findOne({ id: id }).populate("operator", "name email");
+            bus = await Bus.findOne({ id: id, isDeleted: false }).populate("operator", "name email");
         }
 
         if (!bus) {
@@ -135,7 +135,7 @@ POPULAR BUSES
 ====================================================== */
 export async function getPopularBuses(req, res) {
     try {
-        const buses = await Bus.find({ isMostPopular: true }).limit(6);
+        const buses = await Bus.find({ isMostPopular: true, isDeleted: false }).limit(6);
 
         res.status(200).json({
             success: true,
@@ -178,7 +178,7 @@ UPDATE BUS
 ====================================================== */
 export async function updateBus(req, res) {
     try {
-        const bus = await Bus.findById(req.params.id);
+        const bus = await Bus.findOne({ _id: req.params.id, isDeleted: false });
 
         if (!bus) {
             return res
@@ -196,8 +196,8 @@ export async function updateBus(req, res) {
                 .json({ success: false, message: "Not authorized" });
         }
 
-        const updatedBus = await Bus.findByIdAndUpdate(
-            req.params.id,
+        const updatedBus = await Bus.findOneAndUpdate(
+            { _id: req.params.id, isDeleted: false },
             req.body,
             {
                 new: true,
@@ -222,7 +222,7 @@ DELETE BUS (SOFT DELETE)
 ====================================================== */
 export async function deleteBus(req, res) {
     try {
-        const bus = await Bus.findById(req.params.id);
+        const bus = await Bus.findOne({ _id: req.params.id, isDeleted: false });
 
         if (!bus) {
             return res
@@ -239,7 +239,10 @@ export async function deleteBus(req, res) {
                 .json({ success: false, message: "Not authorized" });
         }
 
-        await Bus.findByIdAndDelete(req.params.id);
+        await Bus.findByIdAndUpdate(req.params.id, {
+            isDeleted: true,
+            deletedAt: new Date()
+        });
 
         res.status(200).json({
             success: true,
@@ -258,7 +261,7 @@ UPLOAD BUS IMAGES
 ====================================================== */
 export async function uploadImages(req, res) {
     try {
-        const bus = await Bus.findById(req.params.id);
+        const bus = await Bus.findOne({ _id: req.params.id, isDeleted: false });
 
         if (!bus) {
             return res

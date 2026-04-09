@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Chartered Bus - Frontend
 
-## Getting Started
+This is the frontend of the **Chartered Bus** project, built with **Next.js 16** and **Tailwind CSS 4**. It provides a high-performance, interactive user interface for booking luxury charter buses.
 
-First, run the development server:
+## 🚀 Key Features
+- **Dynamic Booking Form**: Real-time address suggestions using LocationIQ.
+- **Admin Dashboard**: Visual insights with Recharts.
+- **Smooth Animations**: Animated transitions with Framer Motion.
+- **Responsive Layout**: Optimized for all device sizes.
+- **Type Safety**: Prop-types for component validation.
 
+## 🛠️ Tech Stack
+- **Framework**: [Next.js 16 (App Router)](https://nextjs.org/)
+- **UI Library**: [React 19](https://react.dev/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Animations**: [Framer Motion](https://www.framer.com/motion/)
+- **Data Fetching**: [Axios](https://axios-http.com/)
+
+## 🏁 Getting Started
+
+### 1. Install Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure Environment
+Create a `.env.local` file with the following keys:
+- `NEXT_PUBLIC_API_URL`: The backend server URL.
+- `NEXT_PUBLIC_LOCATIONIQ_KEY`: Your LocationIQ API key.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### 3. Run Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to see the application.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📁 Structure
+- `src/app`: Page routes and layouts.
+- `src/components`: UI components (Navbar, Footer, Booking Form, etc.).
+- `src/services`: API communication logic.
+- `src/hooks`: Global custom hooks.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📜 Development Notes
+- Ensure the backend is running at the URL specified in `NEXT_PUBLIC_API_URL`.
+- Use `lucide-react` for any additional icons.
+- Follow the design system defined in `src/app/globals.css`.

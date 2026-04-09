@@ -232,17 +232,19 @@ export const createPage = async (req, res) => {
 
 export const getAllPages = async (req, res) => {
     try {
+        console.log("[getAllPages] Request received");
         const pages = await CharterBusPage.find(
-            {},
+            { isDeleted: false },
             "slug country city main.title_line1 hero.heroImage seo.meta_title status createdAt updatedAt",
         ).sort({ createdAt: -1 });
 
+        console.log(`[getAllPages] Returning ${pages.length} pages`);
         return res.status(200).json({ success: true, data: pages });
     } catch (err) {
-        console.error("[getAllPages]", err);
+        console.error("[getAllPages] Error detail:", err);
         return res
             .status(500)
-            .json({ success: false, message: "Server error" });
+            .json({ success: false, message: "Server error", error: err.message });
     }
 };
 
@@ -251,8 +253,8 @@ export const publishPage = async (req, res) => {
         const { id } = req.params;
         const { isPublished } = req.body;
 
-        const page = await CharterBusPage.findByIdAndUpdate(
-            id,
+        const page = await CharterBusPage.findOneAndUpdate(
+            { _id: id, isDeleted: false },
             { $set: { status: isPublished ? "Published" : "Draft" } },
             { new: true, runValidators: true },
         );
@@ -274,7 +276,7 @@ export const publishPage = async (req, res) => {
 
 export const getPageById = async (req, res) => {
     try {
-        const page = await CharterBusPage.findById(req.params.id);
+        const page = await CharterBusPage.findOne({ _id: req.params.id, isDeleted: false });
         if (!page)
             return res
                 .status(404)
@@ -300,6 +302,7 @@ export const getPageBySlug = async (req, res) => {
         const page = await CharterBusPage.findOne({
             slug,
             status: "Published",
+            isDeleted: false,
         });
         if (!page)
             return res
@@ -344,6 +347,7 @@ export const previewPageBySlug = async (req, res) => {
 
         const page = await CharterBusPage.findOne({
             slug: decodedSlug,
+            isDeleted: false,
         });
 
         if (!page) {
@@ -373,8 +377,8 @@ export const updatePage = async (req, res) => {
         const processed = await processAllImages(req.body, slug);
         const doc = buildDoc(processed);
 
-        const page = await CharterBusPage.findByIdAndUpdate(
-            req.params.id,
+        const page = await CharterBusPage.findOneAndUpdate(
+            { _id: req.params.id, isDeleted: false },
             { $set: doc },
             { new: true, runValidators: true },
         );
@@ -402,15 +406,15 @@ export const updatePage = async (req, res) => {
 
 export const patchPage = async (req, res) => {
     try {
-        const existing = await CharterBusPage.findById(req.params.id).select(
+        const existing = await CharterBusPage.findOne({ _id: req.params.id, isDeleted: false }).select(
             "slug",
         );
         const slug = req.body.slug?.trim() ?? existing?.slug;
         const processed = await processAllImages(req.body, slug);
         const doc = buildDoc(processed);
 
-        const page = await CharterBusPage.findByIdAndUpdate(
-            req.params.id,
+        const page = await CharterBusPage.findOneAndUpdate(
+            { _id: req.params.id, isDeleted: false },
             { $set: doc },
             { new: true, runValidators: true },
         );
@@ -438,7 +442,11 @@ export const patchPage = async (req, res) => {
 
 export const deletePage = async (req, res) => {
     try {
-        const page = await CharterBusPage.findByIdAndDelete(req.params.id);
+        const page = await CharterBusPage.findOneAndUpdate(
+            { _id: req.params.id, isDeleted: false },
+            { $set: { isDeleted: true, deletedAt: new Date() } },
+            { new: true }
+        );
         if (!page)
             return res
                 .status(404)

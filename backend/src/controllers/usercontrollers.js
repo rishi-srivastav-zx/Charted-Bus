@@ -54,7 +54,7 @@ export const getUsers = async (req, res) => {
   try {
     const { role, isActive, search, page = 1, limit = 10 } = req.query;
     
-    const query = {};
+    const query = { isDeleted: false };
     
     if (role) query.role = role;
     if (isActive !== undefined) query.isActive = isActive === 'true';
@@ -98,7 +98,7 @@ export const getUsers = async (req, res) => {
 // @access  Private/Admin
 export const getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id)
+    const user = await User.findOne({ _id: req.params.id, isDeleted: false })
       .select('-refreshTokens -passwordResetToken -passwordResetExpires');
 
     if (!user) {
@@ -128,7 +128,7 @@ export const updateUser = async (req, res) => {
     const { firstName, lastName, role, permissions, isActive } = req.body;
 
     // Prevent changing super admin
-    const targetUser = await User.findById(req.params.id);
+    const targetUser = await User.findOne({ _id: req.params.id, isDeleted: false });
     if (targetUser.role === 'superadmin' && req.user._id.toString() !== req.params.id) {
       return res.status(403).json({
         success: false,
@@ -136,8 +136,8 @@ export const updateUser = async (req, res) => {
       });
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.id, isDeleted: false },
       {
         firstName,
         role,
@@ -172,7 +172,7 @@ export const updateUser = async (req, res) => {
 // @access  Private/SuperAdmin
 export const deleteUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findOne({ _id: req.params.id, isDeleted: false });
 
     if (!user) {
       return res.status(404).json({
@@ -189,7 +189,10 @@ export const deleteUser = async (req, res) => {
       });
     }
 
-    await user.deleteOne();
+    // await user.deleteOne();
+    user.isDeleted = true;
+    user.deletedAt = new Date();
+    await user.save();
 
     res.json({
       success: true,
@@ -210,7 +213,7 @@ export const resetUserPassword = async (req, res) => {
   try {
     const { newPassword } = req.body;
 
-    const user = await User.findById(req.params.id).select('+password');
+    const user = await User.findOne({ _id: req.params.id, isDeleted: false }).select('+password');
     
     if (!user) {
       return res.status(404).json({

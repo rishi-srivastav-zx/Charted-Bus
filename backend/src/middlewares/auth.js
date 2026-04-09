@@ -21,7 +21,7 @@ const protect = async (req, res, next) => {
         try {
             const decoded = verifyAccessToken(token);
 
-            const user = await User.findById(decoded.userId).select(
+            const user = await User.findOne({ _id: decoded.userId, isDeleted: false }).select(
                 "+passwordChangedAt",
                 
             );

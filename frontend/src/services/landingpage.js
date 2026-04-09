@@ -19,7 +19,7 @@ const serverSafeGet = async (url, options = {}) => {
 
 
 const serverClient = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
     headers: { "Content-Type": "application/json" },
 });
 
@@ -32,7 +32,7 @@ const serverSafeGetWithParams = async (url, params = {}, token = null) => {
 };  
 
 const publicClient = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
     headers: { "Content-Type": "application/json" },
 });
 

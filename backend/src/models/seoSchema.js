@@ -7,10 +7,10 @@ const CharterBusPageSchema = new Schema(
         slug: { type: String, required: true, trim: true, unique: true },
         country: { type: String, required: true, trim: true },
         city: { type: String, required: true, trim: true },
-        status: { 
-            type: String, 
-            enum: ["Draft", "Published"], 
-            default: "Draft" 
+        status: {
+            type: String,
+            enum: ["Draft", "Published"],
+            default: "Draft",
         },
 
         // ── Hero Section ───────────────────────────────────────────
@@ -31,43 +31,43 @@ const CharterBusPageSchema = new Schema(
         },
 
         // ══════════════════════════════════════════════════════════════
-        // ── Hero Section  
+        // ── Hero Section
         // ══════════════════════════════════════════════════════════════
         hero: {
-            heading: { type: String, default: "", trim: true }, 
-            subtext: { type: String, default: "", trim: true }, 
-            heroImage: { type: String, default: "", trim: true }, 
-            description: { type: String, default: "" }, 
+            heading: { type: String, default: "", trim: true },
+            subtext: { type: String, default: "", trim: true },
+            heroImage: { type: String, default: "", trim: true },
+            description: { type: String, default: "" },
         },
 
         // ══════════════════════════════════════════════════════════════
-        // ── Services Section  
+        // ── Services Section
         // ══════════════════════════════════════════════════════════════
         services: {
             heading: { type: String, default: "", trim: true },
             subheading: { type: String, default: "", trim: true },
             items: [
                 {
-                    icon: { type: String, default: "", trim: true }, 
+                    icon: { type: String, default: "", trim: true },
                     title: { type: String, default: "", trim: true },
                     description: { type: String, default: "", trim: true },
-                    link: { type: String, default: "", trim: true }, 
+                    link: { type: String, default: "", trim: true },
                     _id: false,
                 },
             ],
         },
 
         // ══════════════════════════════════════════════════════════════
-        // ── Why Choose Us Section  
+        // ── Why Choose Us Section
         // ══════════════════════════════════════════════════════════════
         whyus: {
-            heading: { type: String, default: "", trim: true }, 
-            subtext: { type: String, default: "", trim: true }, 
-            mainContent: { type: String, default: "" }, 
+            heading: { type: String, default: "", trim: true },
+            subtext: { type: String, default: "", trim: true },
+            mainContent: { type: String, default: "" },
             reasons: [
                 {
-                    title: { type: String, default: "", trim: true }, 
-                    body: { type: String, default: "", trim: true }, 
+                    title: { type: String, default: "", trim: true },
+                    body: { type: String, default: "", trim: true },
                     _id: false,
                 },
             ],
@@ -90,35 +90,43 @@ const CharterBusPageSchema = new Schema(
         },
 
         // ══════════════════════════════════════════════════════════════
-        // ── Testimonials Section  
+        // ── Testimonials Section
         // ══════════════════════════════════════════════════════════════
         testimonials: {
             items: [
                 {
                     name: { type: String, default: "", trim: true },
-                    role: { type: String, default: "", trim: true }, 
-                    text: { type: String, default: "", trim: true }, 
+                    role: { type: String, default: "", trim: true },
+                    text: { type: String, default: "", trim: true },
                     rating: { type: Number, default: 5, min: 1, max: 5 },
-                    photo: { type: String, default: "", trim: true }, 
+                    photo: { type: String, default: "", trim: true },
                     _id: false,
                 },
             ],
         },
 
         // ══════════════════════════════════════════════════════════════
-        // ── FAQ Section  
+        // ── FAQ Section
         // ══════════════════════════════════════════════════════════════
         faq: {
-            tag: { type: String, default: "", trim: true }, 
-            heading: { type: String, default: "", trim: true }, 
-            subtext: { type: String, default: "", trim: true }, 
+            tag: { type: String, default: "", trim: true },
+            heading: { type: String, default: "", trim: true },
+            subtext: { type: String, default: "", trim: true },
             items: [
                 {
-                    question: { type: String, default: "", trim: true }, 
-                    answer: { type: String, default: "", trim: true }, 
+                    question: { type: String, default: "", trim: true },
+                    answer: { type: String, default: "", trim: true },
                     _id: false,
                 },
             ],
+        },
+        isDeleted: {
+            type: Boolean,
+            default: false,
+        },
+        deletedAt: {
+            type: Date,
+            default: null,
         },
     },
     {

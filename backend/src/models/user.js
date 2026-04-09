@@ -79,6 +79,15 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    },
+    deletedAt: {
+        type: Date,
+        default: null,
+    },
 });
 
 // Indexes for performance

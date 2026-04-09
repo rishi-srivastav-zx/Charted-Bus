@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { getCountries, getCities } from "@/services/countryapi";    
+import { getCountries, getCities } from "../../../services/countryapi";    
 
 const Label = ({ children, required }) => (
     <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">

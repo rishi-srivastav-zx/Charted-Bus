@@ -10,7 +10,7 @@ import {
     Shield,
     ArrowRight,
 } from "lucide-react";
-import { getAllBuses } from "@/services/busservices";
+import { getAllBuses } from "../../../services/busservices";
 import Link from "next/link";   
 
 // Feature icon mapping
@@ -49,8 +49,10 @@ const BusTypes = () => {
                 setLoading(true);
                 const res = await getAllBuses({ limit: 8 });
                 const data = res?.data?.data ?? res?.data ?? [];
-                console.log("Buses data:", data); // Debug
-                setBuses(Array.isArray(data) ? data : []);
+                const validBuses = (Array.isArray(data) ? data : []).filter(
+                    (bus) => bus._id && bus._id.length === 24
+                );
+                setBuses(validBuses);
             } catch (err) {
                 setError(err.message || "Failed to load buses");
             } finally {
@@ -118,15 +120,15 @@ const BusTypes = () => {
                 {/* Grid */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {buses.map((bus, i) => (
-                        <motion.div
-                            key={bus._id || bus.id || i}
+                            <motion.div
+                            key={bus._id || i}
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.5, delay: i * 0.1 }}
                             whileHover={{ y: -8 }}
                             className="group bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 hover:shadow-xl hover:border-orange-200 transition-all duration-300"
-                        >
+                            >
                             {/* Image Container */}
                             <div className="relative h-56 overflow-hidden bg-slate-100">
                                 <img
@@ -206,13 +208,15 @@ const BusTypes = () => {
                                 </div>
 
                                 {/* CTA Button */}
-                                <Link href={`/BusPage?id=${bus._id || bus.id}`} className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-3 rounded-xl font-semibold text-sm hover:bg-orange-500 transition-colors duration-300 group/btn">
+                                {bus._id && bus._id.length === 24 && (
+                                    <Link href={`/BusPage?id=${bus._id}`} className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-3 rounded-xl font-semibold text-sm hover:bg-orange-500 transition-colors duration-300 group/btn">
                                     View Details
                                     <ArrowRight
                                         size={16}
                                         className="transform group-hover/btn:translate-x-1 transition-transform"
                                     />
                                 </Link>
+                                )}
                             </div>
                         </motion.div>
                     ))}

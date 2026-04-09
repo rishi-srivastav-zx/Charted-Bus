@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/app/lib/uitls";
+import { cn } from "../../app/lib/uitls";
 
 export const SidebarItem = ({
     icon: Icon,

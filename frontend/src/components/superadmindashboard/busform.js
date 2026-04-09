@@ -59,7 +59,7 @@ import {
     Bed,
     XIcon,
 } from "lucide-react";
-import { createBusWithHandler, updateBusWithHandler, uploadImage } from "@/services/busservices";
+import { createBusWithHandler, updateBusWithHandler, uploadImage } from "../../services/busservices";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
-import Header from "@/components/header";
-import LuxCharterPage from "@/components/bookinginterfacecomponent/basicdetails";
-import { getPageBySlug, previewPageBySlug } from "@/services/landingpage";
-import CharterBusLanding from "@/components/superadmindashboard/seoeditor/seoContentpage";
+import Header from "../../../../components/header";
+import LuxCharterPage from "../../../../components/bookinginterfacecomponent/basicdetails";
+import { getPageBySlug, previewPageBySlug } from "../../../../services/landingpage";
+import CharterBusLanding from "../../../../components/superadmindashboard/seoeditor/seoContentpage";
 import { cookies } from "next/headers";
 
 const getCharterPage = async (country, city) => {
@@ -34,6 +34,7 @@ const getCharterPage = async (country, city) => {
             }
         } catch (error) {
             if (error.response?.status === 403) {
+            } else if (error.response?.status === 401) {
             } else if (error.response?.status !== 404) {
                 console.error("Preview API error:", error.message);
             }

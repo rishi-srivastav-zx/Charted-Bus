@@ -44,7 +44,14 @@ const VehicleSchema = new mongoose.Schema(
         image: { type: String },
         category: {
             type: String,
-            enum: ["Luxury Coach", "Mini Bus", "Volvo Bus", "Sleeper Bus", "AC Deluxe", "Non-AC Standard"],
+            enum: [
+                "Luxury Coach",
+                "Mini Bus",
+                "Volvo Bus",
+                "Sleeper Bus",
+                "AC Deluxe",
+                "Non-AC Standard",
+            ],
         },
         seatCapacity: { type: Number },
         isMostPopular: { type: Boolean, default: false },
@@ -98,6 +105,14 @@ const VehicleSchema = new mongoose.Schema(
         addOns: [AddOnSchema],
         additionalInfo: [AdditionalInfoSchema],
         policies: [PolicySchema],
+        isDeleted: {
+            type: Boolean,
+            default: false,
+        },
+        deletedAt: {
+            type: Date,
+            default: null,
+        },
     },
     { timestamps: true },
 );

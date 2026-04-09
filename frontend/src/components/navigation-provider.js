@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext } from "react";
-import useLoadingNavigation from "@/components/loadinoverlay";
+import useLoadingNavigation from "../components/loadinoverlay";
 
 const NavContext = createContext(null);
 

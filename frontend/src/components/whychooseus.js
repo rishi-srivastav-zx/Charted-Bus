@@ -37,7 +37,7 @@ const WhyChooseUs = () => {
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Why Choose PrimeDrive?</h2>
+          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">Why Choose CharterBus?</h2>
           <p className="text-white/60 max-w-2xl mx-auto text-lg">
             We set the standard for group travel with a commitment to excellence in every mile.
           </p>

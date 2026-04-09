@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { confirmBooking, getBooking } from "@/services/bookingservice";
+import { confirmBooking, getBooking } from "../../services/bookingservice";
 
 // Utility for cleaner tailwind classes
 function cn(...inputs) {
@@ -68,82 +68,21 @@ const SectionCard = ({
 );
 
 const PriceBreakdown = ({ vehicle = {}, pricing = null, isProcessing, onConfirm, tripType = "one-way", passengers = 0, duration = 0 }) => {
-    // Use pricing from backend if available, otherwise calculate from vehicle
-    const baseFare = pricing?.baseFare || vehicle?.price || 0;
-    const fuelSurcharge = pricing?.fuelSurcharge || 45;
-    const driverGratuity = pricing?.driverGratuity || (baseFare * 0.1);
-    const serviceFees = pricing?.serviceFees || 12.5;
-    const taxes = pricing?.taxes || vehicle?.taxes || 0;
-    const currency = pricing?.currency || vehicle?.currency || "USD";
-    const billingCycle = vehicle?.billingCycle || "per trip";
-    const includedKms = vehicle?.includedKms || 0;
-    const extraKmRate = vehicle?.extraKmRate || 0;
-    
-    // Calculate total based on trip type
-    let total;
-    if (pricing?.totalAmount) {
-        total = pricing.totalAmount;
-    } else if (tripType === "hourly") {
-        // For hourly trips, calculate based on hours (duration)
-        total = baseFare * (duration || 1) + taxes + driverGratuity + serviceFees;
-    } else {
-        // For per-trip (one-way or round-trip)
-        total = baseFare + fuelSurcharge + taxes + driverGratuity + serviceFees;
-    }
-    // Double for round trip
-    if (tripType === "round-trip") {
-        total = total * 2;
-    }
-
-    const items = [
-        { label: "Base Fare", value: `$${baseFare.toLocaleString()}`, sub: billingCycle },
-        { label: "Fuel Surcharge", value: `$${fuelSurcharge.toFixed(2)}`, sub: tripType !== "hourly" ? "Included" : null },
-        { label: "Taxes & Fees", value: `$${(taxes + serviceFees).toFixed(2)}`, sub: null },
-        { label: "Driver Gratuity", value: `$${driverGratuity.toFixed(2)}`, sub: "Optional" },
-    ];
-
     return (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm sticky top-28">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">
                 Price Details
             </h3>
-            {billingCycle && (
-                <p className="text-xs text-slate-400 mb-4">
-                    {tripType === "hourly" ? `$${baseFare}/hour • ${passengers} passengers` : `From $${baseFare.toLocaleString()} per trip`}
-                </p>
-            )}
 
-            <div className="space-y-3 mb-6">
-                {items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-sm">
-                        <div className="flex flex-col">
-                            <span className="text-slate-500">{item.label}</span>
-                            {item.sub && <span className="text-[10px] text-slate-400">{item.sub}</span>}
-                        </div>
-                        <span className="text-slate-900 font-medium">
-                            {item.value}
-                        </span>
-                    </div>
-                ))}
-            </div>
-
-            <div className="border-t border-slate-100 pt-6 mb-6">
-                <div className="flex justify-between items-end">
-                    <div>
-                        <div className="text-xs text-slate-500 uppercase font-black tracking-wider mb-1">
-                            {tripType === "round-trip" ? "Round Trip Total" : "Total Estimate"}
-                        </div>
-                        <div className="text-[10px] text-slate-400 font-bold">
-                            ALL TAXES INCLUDED
-                        </div>
-                    </div>
-                    <div className="text-3xl font-black text-slate-900">
-                        ${total.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                        })}
-                    </div>
+            {/* Final price message */}
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    <span className="text-xs font-bold text-amber-800">Final Price Notice</span>
                 </div>
+                <p className="text-xs text-amber-700 leading-relaxed">
+                    Final price will be shared after confirmation. Our team will send you a detailed quote via email.
+                </p>
             </div>
 
             <button
@@ -182,8 +121,7 @@ const PriceBreakdown = ({ vehicle = {}, pricing = null, isProcessing, onConfirm,
                         Secure Checkout
                     </h4>
                     <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
-                        Your booking is encrypted and protected. 24/7 priority
-                        support.
+                        Your booking is encrypted and protected. 24/7 priority support.
                     </p>
                 </div>
             </div>
@@ -240,14 +178,12 @@ export default function ReviewItineraryPage() {
         async function fetchBookingData() {
             try {
                 const bookingId = localStorage.getItem("bookingId");
-                console.log("Fetching booking with ID:", bookingId);
+
                 
                 // Try to fetch from backend first
                 if (bookingId) {
                     const response = await getBooking(bookingId);
-                    console.log("Backend response:", response);
                     const booking = response.data?.booking;
-                    console.log("Backend booking:", booking);
                     
                     if (booking) {
                         setBackendBooking(booking);
@@ -310,7 +246,6 @@ export default function ReviewItineraryPage() {
                 }
                 
                 // Fallback to localStorage
-                console.log("No bookingId, using localStorage");
                 const step1 = localStorage.getItem("bookingStep1");
                 const step2 = localStorage.getItem("bookingStep2");
                 if (step1) {
@@ -454,7 +389,7 @@ export default function ReviewItineraryPage() {
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900 pb-24 mt-20">
             <Head>
-                <title>Review Booking | LuxCharter</title>
+                <title>Review Booking | CharterBus</title>
             </Head>
 
             <main className="max-w-7xl mx-auto px-6 py-12 md:px-12">
@@ -587,14 +522,20 @@ export default function ReviewItineraryPage() {
                         >
                             <div className="flex flex-col md:flex-row gap-8">
                                 <div className="w-full md:w-64 h-40 bg-slate-100 rounded-3xl overflow-hidden shrink-0 border border-slate-200 shadow-inner">
-                                    <img
-                                        src={
-                                            vehicle.image ||
-                                            "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&q=80&w=600"
-                                        }
-                                        alt={vehicle.name}
-                                        className="w-full h-full object-cover"
-                                    />
+                                    {vehicle?.images?.[0] || vehicle?.image ? (
+                                        <img
+                                            src={
+                                                vehicle.images?.[0] ||
+                                                vehicle.image
+                                            }
+                                            alt={vehicle.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+                                            <Bus className="w-12 h-12 text-slate-300" />
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex-grow py-1">
                                     <div className="flex justify-between items-start mb-2">
@@ -631,7 +572,7 @@ export default function ReviewItineraryPage() {
                                                     Capacity
                                                 </p>
                                                 <p className="text-xs font-bold text-slate-700">
-                                                    {vehicle.passengers} Seats
+                                                    {(vehicle.passengers || vehicle.seatCapacity || 0)} Seats
                                                 </p>
                                             </div>
                                         </div>
@@ -717,10 +658,10 @@ export default function ReviewItineraryPage() {
             <footer className="bg-white border-t border-slate-100 mt-20 py-12">
                 <div className="max-w-7xl mx-auto px-6 md:px-12 text-center">
                     <p className="text-[11px] font-black text-slate-300 uppercase tracking-[0.3em] mb-4">
-                        LuxCharter Premium Fleet Services
+                        CharterBus Premium Fleet Services
                     </p>
                     <p className="text-[11px] text-slate-400 font-medium">
-                        © 2024 LuxCharter Inc. All rights reserved. Managed and
+                        © 2024 CharterBus. All rights reserved. Managed and
                         operated in USA.
                     </p>
                 </div>

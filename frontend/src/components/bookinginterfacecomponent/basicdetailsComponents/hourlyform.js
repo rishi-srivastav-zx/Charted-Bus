@@ -181,10 +181,12 @@ export default function HourlyForm({ data, onChange }) {
                         onTypeChange={(v) => updateField("dropoffType", v)}
                     />
                     <Divider />
-                    <PassengerCounter
-                        count={data.passengers || 1}
-                        setCount={(v) => updateField("passengers", v)}
-                    />
+                    <div className="px-2 sm:px-0">
+                        <PassengerCounter
+                            count={data.passengers || 1}
+                            setCount={(v) => updateField("passengers", v)}
+                        />
+                    </div>
                 </div>
             </FormCard>
 

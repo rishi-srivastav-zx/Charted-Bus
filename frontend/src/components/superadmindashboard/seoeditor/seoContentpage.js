@@ -28,9 +28,13 @@ import {
     Volume2,
     Battery,
     Coffee,
+    ShieldCheck,
+    CreditCard,
+    Headphones,
+    BadgeCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getAllBuses } from "@/services/busservices";
+import { getAllBuses } from "../../../services/busservices";
 
 // --- Animation Variants ---
 const containerVariants = {
@@ -106,30 +110,31 @@ const ServiceCard = ({ icon: Icon, title, desc }) => (
         <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 sm:mb-3">
             {title}
         </h3>
-        <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
+        <div className="text-gray-600 text-sm sm:text-base leading-relaxed">
             {desc}
-        </p>
+        </div>
     </motion.div>
 );
 
 const FAQItem = ({ question, answer, isOpen, onClick }) => (
     <div className="border border-gray-200 rounded-xl bg-white overflow-hidden mb-3 sm:mb-4 hover:border-orange-200 transition-colors">
         <button
+            type="button"
             onClick={onClick}
-            className="w-full flex justify-between items-center p-4 sm:p-6 text-left"
+            className="w-full flex justify-between items-center p-4 sm:p-6 text-left focus:outline-none"
         >
-            <span className="font-bold text-gray-900 text-base sm:text-lg pr-4">
+            <span className="font-bold text-gray-900 text-base sm:text-lg pr-4 line-clamp-2">
                 {question}
             </span>
-            <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isOpen ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}
+            <span
+                className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${isOpen ? "bg-orange-100 text-orange-600" : "bg-gray-100 text-gray-500"}`}
             >
                 {isOpen ? (
                     <ChevronUp className="w-5 h-5" />
                 ) : (
                     <ChevronDown className="w-5 h-5" />
                 )}
-            </div>
+            </span>
         </button>
         <AnimatePresence>
             {isOpen && (
@@ -139,9 +144,10 @@ const FAQItem = ({ question, answer, isOpen, onClick }) => (
                     exit={{ height: 0 }}
                     className="px-4 sm:px-6 pb-4 sm:pb-6"
                 >
-                    <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
-                        {answer}
-                    </p>
+                    <div 
+                        className="text-gray-600 text-sm sm:text-base leading-relaxed prose-p:mb-2"
+                        dangerouslySetInnerHTML={{ __html: answer }}
+                    />
                 </motion.div>
             )}
         </AnimatePresence>
@@ -261,10 +267,14 @@ export default function CharterBusLanding({ data }) {
                                     {hero.heading || "Charter Bus Rental"}
                                 </span>
                             </h2>
-                            <p className="text-gray-600 text-base sm:text-lg leading-relaxed mb-4">
-                                {pageData.guide?.bodyHtml ||
-                                    "Navigating the sprawl of Los Angeles is effortless when you leave the driving to us. Whether you're coordinating a multi-day corporate summit or a scenic tour, our fleet offers the perfect blend of luxury and reliability."}
-                            </p>
+                            <div
+                                className="text-gray-600 text-base sm:text-lg leading-relaxed mb-4 prose-p:mb-4"
+                                dangerouslySetInnerHTML={{
+                                    __html:
+                                        pageData.guide?.bodyHtml ||
+                                        "Navigating the sprawl of Los Angeles is effortless when you leave the driving to us. Whether you're coordinating a multi-day corporate summit or a scenic tour, our fleet offers the perfect blend of luxury and reliability.",
+                                }}
+                            />
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 sm:gap-y-4 sm:gap-x-8 pt-2">
@@ -302,114 +312,161 @@ export default function CharterBusLanding({ data }) {
                     </motion.div>
                 </div>
             </section>
-
-            {/* ── STATS BAR (DYNAMIC) ── */}
-            {stats.length > 0 && (
-                <section className="bg-orange-600 py-4 sm:py-6">
-                    <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8">
-                        {stats.map((stat, i) => {
-                            const IconComponent = iconMap[stat.icon] || Award;
-                            return (
-                                <div key={i} className="text-center text-white">
-                                    <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 text-orange-200" />
-                                    <div className="text-2xl sm:text-4xl font-extrabold mb-0.5 sm:mb-1">
-                                        {stat.value}
-                                    </div>
-                                    <div className="text-orange-100 text-xs sm:text-sm">
-                                        {stat.label}
-                                    </div>
-                                </div>
-                            );
-                        })}
+            {/* ── STATS BAR (STATIC) ── */}
+            <section className="bg-orange-600 py-4 sm:py-6">
+                <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8">
+                    <div className="text-center text-white">
+                        <Award className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 text-orange-200" />
+                        <div className="text-2xl sm:text-4xl font-extrabold mb-0.5 sm:mb-1">
+                            10K+
+                        </div>
+                        <div className="text-orange-100 text-xs sm:text-sm">
+                            Happy Travelers
+                        </div>
                     </div>
-                </section>
-            )}
-
-            {/* ── TRUST BAR (DYNAMIC) ── */}
-            {trustFeatures.length > 0 && (
-                <section className="bg-white py-8 sm:py-12 md:py-16 border-y border-gray-100">
-                    <div className="max-w-7xl mx-auto px-4 flex flex-wrap justify-center gap-6 sm:gap-12 md:gap-20">
-                        {trustFeatures.map((feature, idx) => {
-                            const IconComponent = iconMap[feature.icon] || Bus;
-                            return (
-                                <div
-                                    key={idx}
-                                    className="flex flex-col items-center text-center"
-                                >
-                                    <div className="mb-2 sm:mb-4 p-2 sm:p-4 bg-orange-50 rounded-xl">
-                                        <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
-                                    </div>
-                                    <span className="text-[10px] sm:text-xs font-bold tracking-widest text-gray-500 uppercase">
-                                        {feature.label}
-                                    </span>
-                                </div>
-                            );
-                        })}
+                    <div className="text-center text-white">
+                        <Bus className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 text-orange-200" />
+                        <div className="text-2xl sm:text-4xl font-extrabold mb-0.5 sm:mb-1">
+                            500+
+                        </div>
+                        <div className="text-orange-100 text-xs sm:text-sm">
+                            Routes Covered
+                        </div>
                     </div>
-                </section>
-            )}
+                    <div className="text-center text-white">
+                        <Shield className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 text-orange-200" />
+                        <div className="text-2xl sm:text-4xl font-extrabold mb-0.5 sm:mb-1">
+                            99%
+                        </div>
+                        <div className="text-orange-100 text-xs sm:text-sm">
+                            Safety Rating
+                        </div>
+                    </div>
+                    <div className="text-center text-white">
+                        <Clock className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 text-orange-200" />
+                        <div className="text-2xl sm:text-4xl font-extrabold mb-0.5 sm:mb-1">
+                            24/7
+                        </div>
+                        <div className="text-orange-100 text-xs sm:text-sm">
+                            Support Available
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── TRUST BAR (STATIC) ── */}
+            <section className="bg-white py-8 sm:py-12 md:py-16 border-y border-gray-100">
+                <div className="max-w-7xl mx-auto px-4 flex flex-wrap justify-center gap-6 sm:gap-12 md:gap-20">
+                    <div className="flex flex-col items-center text-center">
+                        <div className="mb-2 sm:mb-4 p-2 sm:p-4 bg-orange-50 rounded-xl">
+                            <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
+                        </div>
+                        <span className="text-[10px] sm:text-xs font-bold tracking-widest text-gray-500 uppercase">
+                            Secure Booking
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-center text-center">
+                        <div className="mb-2 sm:mb-4 p-2 sm:p-4 bg-orange-50 rounded-xl">
+                            <CreditCard className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
+                        </div>
+                        <span className="text-[10px] sm:text-xs font-bold tracking-widest text-gray-500 uppercase">
+                            Easy Payments
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-center text-center">
+                        <div className="mb-2 sm:mb-4 p-2 sm:p-4 bg-orange-50 rounded-xl">
+                            <Headphones className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
+                        </div>
+                        <span className="text-[10px] sm:text-xs font-bold tracking-widest text-gray-500 uppercase">
+                            24/7 Support
+                        </span>
+                    </div>
+                    <div className="flex flex-col items-center text-center">
+                        <div className="mb-2 sm:mb-4 p-2 sm:p-4 bg-orange-50 rounded-xl">
+                            <BadgeCheck className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
+                        </div>
+                        <span className="text-[10px] sm:text-xs font-bold tracking-widest text-gray-500 uppercase">
+                            Verified Operators
+                        </span>
+                    </div>
+                </div>
+            </section>
 
             {/* ── ABOUT SECTION (DYNAMIC) ── */}
             {aboutData && (
                 <section className="py-16 sm:py-20 md:py-24 bg-white">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-center">
-                            <div className="space-y-4 sm:space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 items-start">
+                            {/* Left Column - Sticky on Desktop */}
+                            <div className="space-y-4 sm:space-y-6 lg:sticky lg:top-24">
                                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
                                     {aboutData.heading ||
                                         "Why Groups Choose Us Over the Competition"}
                                 </h2>
-                                <p className="text-gray-600 text-base sm:text-lg">
-                                    {aboutData.mainContent ||
-                                        aboutData.subtext ||
-                                        "Los Angeles is one of the most complex cities to navigate. Our dispatchers are LA natives who know every shortcut and construction detour."}
-                                </p>
-                                {aboutData.reasons && aboutData.reasons.length > 0 && (
-                                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-2 sm:pt-4">
-                                        {aboutData.reasons.slice(0, 2).map((reason, i) => {
-                                            const IconComponent = iconMap[reason.icon] || Shield;
-                                            return (
+                                <div
+                                    className="text-gray-600 text-base sm:text-lg prose-p:mb-4"
+                                    dangerouslySetInnerHTML={{
+                                        __html:
+                                            aboutData.mainContent ||
+                                            aboutData.subtext ||
+                                            "Los Angeles is one of the most complex cities to navigate. Our dispatchers are LA natives who know every shortcut and construction detour.",
+                                    }}
+                                />
+                                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-2 sm:pt-4">
+                                    <div className="flex items-center gap-2 sm:gap-3 bg-gray-50 rounded-xl p-3 sm:p-4">
+                                        <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
+                                        <div>
+                                            <div className="font-bold text-sm sm:text-base">
+                                                Safety First
+                                            </div>
+                                            <div className="text-xs sm:text-sm text-gray-500">
+                                                Verified operators & secure
+                                                bookings
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 sm:gap-3 bg-gray-50 rounded-xl p-3 sm:p-4">
+                                        <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
+                                        <div>
+                                            <div className="font-bold text-sm sm:text-base">
+                                                24/7 Support
+                                            </div>
+                                            <div className="text-xs sm:text-sm text-gray-500">
+                                                Round-the-clock customer
+                                                assistance
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right Column - Scrollable Cards */}
+                            {aboutData.reasons &&
+                                aboutData.reasons.length > 0 && (
+                                    <div className="space-y-3 sm:space-y-4 max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-orange-200 scrollbar-track-gray-100">
+                                        {aboutData.reasons.map((reason, i) => (
+                                            <div
+                                                key={i}
+                                                className="bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-100 hover:shadow-md transition-shadow duration-300"
+                                            >
+                                                <h3 className="text-base sm:text-lg font-bold mb-1 sm:mb-2 text-gray-900">
+                                                    {reason.title}
+                                                </h3>
                                                 <div
-                                                    key={i}
-                                                    className="flex items-center gap-2 sm:gap-3 bg-gray-50 rounded-xl p-3 sm:p-4"
-                                                >
-                                                    <IconComponent className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
-                                                    <div>
-                                                        <div className="font-bold text-sm sm:text-base">
-                                                            {reason.title}
-                                                        </div>
-                                                        <div className="text-xs sm:text-sm text-gray-500">
-                                                            {reason.body}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                                    className="text-gray-600 text-sm sm:text-base"
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: reason.body,
+                                                    }}
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
-                            </div>
-                            {aboutData.reasons && aboutData.reasons.length > 0 && (
-                                <div className="space-y-3 sm:space-y-4">
-                                    {aboutData.reasons.map((reason, i) => (
-                                        <div
-                                            key={i}
-                                            className="bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-gray-100"
-                                        >
-                                            <h3 className="text-base sm:text-lg font-bold mb-1 sm:mb-2">
-                                                {reason.title}
-                                            </h3>
-                                            <p className="text-gray-600 text-sm sm:text-base">
-                                                {reason.body}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     </div>
                 </section>
             )}
-
+            
             {/* ── SERVICES GRID (DYNAMIC) ── */}
             {services.length > 0 && (
                 <section className="bg-gray-50 py-16 sm:py-20 md:py-24">
@@ -439,9 +496,14 @@ export default function CharterBusLanding({ data }) {
                                         icon={IconComponent}
                                         title={service.title || "Service"}
                                         desc={
-                                            service.description ||
-                                            service.desc ||
-                                            ""
+                                            <div
+                                                dangerouslySetInnerHTML={{
+                                                    __html:
+                                                        service.description ||
+                                                        service.desc ||
+                                                        "",
+                                                }}
+                                            />
                                         }
                                     />
                                 );
@@ -451,33 +513,124 @@ export default function CharterBusLanding({ data }) {
                 </section>
             )}
 
-            {/* ── HOW IT WORKS (DYNAMIC) ── */}
-            {howItWorks.length > 0 && (
-                <section className="py-16 sm:py-20 md:py-24 bg-white">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6">
-                        <SectionHeading
-                            title={howItWorksData.heading || "How It Works"}
-                            subtitle="From first contact to final drop-off, we've streamlined every step."
-                        />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
-                            {howItWorks.map((step, i) => (
-                                <div key={i} className="text-center">
-                                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-orange-500 text-white rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 text-xl sm:text-2xl font-extrabold">
-                                        {step.step ||
-                                            String(i + 1).padStart(2, "0")}
-                                    </div>
-                                    <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-3">
-                                        {step.title}
+            {/* ── HOW IT WORKS (STATIC - ENHANCED) ── */}
+            <section className="py-16 sm:py-20 md:py-28 bg-gradient-to-b from-white to-gray-50/50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    {/* Header */}
+                    <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 md:mb-20">
+                        <span className="inline-block px-4 py-1.5 bg-orange-100 text-orange-600 text-xs sm:text-sm font-semibold rounded-full mb-4">
+                            Simple Process
+                        </span>
+                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight">
+                            How It{" "}
+                            <span className="text-orange-500">Works</span>
+                        </h2>
+                        <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
+                            From first contact to final drop-off, we've
+                            streamlined every step for your convenience
+                        </p>
+                    </div>
+
+                    {/* Steps Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 relative">
+                        {/* Connector Line - Desktop Only */}
+                        <div className="hidden md:block absolute top-24 left-1/2 -translate-x-1/2 w-2/3 h-0.5 bg-gradient-to-r from-orange-200 via-orange-400 to-orange-200" />
+
+                        {/* Step 1 */}
+                        <div className="relative group">
+                            <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-lg shadow-gray-200/50 border border-gray-100 hover:shadow-xl hover:shadow-orange-100/50 hover:-translate-y-1 transition-all duration-300 h-full">
+                                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-5 sm:mb-6 text-2xl sm:text-3xl font-black shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform duration-300 relative z-10">
+                                    01
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
+                                        Choose Your Route
                                     </h3>
-                                    <p className="text-gray-600 text-sm sm:text-base">
-                                        {step.desc}
+                                    <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
+                                        Browse and select from 500+ available
+                                        routes across the country with real-time
+                                        availability
                                     </p>
                                 </div>
-                            ))}
+                                {/* Mobile Arrow */}
+                                <div className="md:hidden flex justify-center mt-6">
+                                    <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                                        <svg
+                                            className="w-4 h-4 text-orange-500 rotate-90"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M9 5l7 7-7 7"
+                                            />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="relative group">
+                            <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-lg shadow-gray-200/50 border border-gray-100 hover:shadow-xl hover:shadow-orange-100/50 hover:-translate-y-1 transition-all duration-300 h-full">
+                                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-5 sm:mb-6 text-2xl sm:text-3xl font-black shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform duration-300 relative z-10">
+                                    02
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
+                                        Book Your Seat
+                                    </h3>
+                                    <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
+                                        Secure your booking with our easy
+                                        payment options and instant confirmation
+                                        via email & SMS
+                                    </p>
+                                </div>
+                                {/* Mobile Arrow */}
+                                <div className="md:hidden flex justify-center mt-6">
+                                    <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                                        <svg
+                                            className="w-4 h-4 text-orange-500 rotate-90"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M9 5l7 7-7 7"
+                                            />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step 3 */}
+                        <div className="relative group">
+                            <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-lg shadow-gray-200/50 border border-gray-100 hover:shadow-xl hover:shadow-orange-100/50 hover:-translate-y-1 transition-all duration-300 h-full">
+                                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-5 sm:mb-6 text-2xl sm:text-3xl font-black shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform duration-300 relative z-10">
+                                    03
+                                </div>
+                                <div className="text-center">
+                                    <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
+                                        Travel With Ease
+                                    </h3>
+                                    <p className="text-gray-600 text-sm sm:text-base leading-relaxed">
+                                        Board your bus and enjoy a comfortable
+                                        journey with premium amenities and 24/7
+                                        support
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </section>
-            )}
+                </div>
+            </section>
 
             {/* ── FLEET SECTION (DYNAMIC) ── */}
             {(fleet.length > 0 || vehicles.length > 0) && (
@@ -609,9 +762,12 @@ export default function CharterBusLanding({ data }) {
                                             />
                                         ))}
                                     </div>
-                                    <p className="text-gray-700 mb-4 sm:mb-6 italic text-sm sm:text-base">
-                                        "{t.text || t.description || ""}"
-                                    </p>
+                                    <div
+                                        className="text-gray-700 mb-4 sm:mb-6 italic text-sm sm:text-base"
+                                        dangerouslySetInnerHTML={{
+                                            __html: `"${t.text || t.description || ""}"`,
+                                        }}
+                                    />
                                     <div className="border-t pt-3 sm:pt-4">
                                         <div className="font-bold text-sm sm:text-base">
                                             {t.name || "Client"}
@@ -666,10 +822,14 @@ export default function CharterBusLanding({ data }) {
                                 {ctaData.heading ||
                                     "Still planning your group trip?"}
                             </h2>
-                            <p className="text-gray-200 text-base sm:text-lg md:text-xl mb-8 sm:mb-12 max-w-2xl mx-auto">
-                                {ctaData.body ||
-                                    "Our travel experts are ready to help you find the perfect vehicle at the best rate."}
-                            </p>
+                            <div
+                                className="text-gray-200 text-base sm:text-lg md:text-xl mb-8 sm:mb-12 max-w-2xl mx-auto"
+                                dangerouslySetInnerHTML={{
+                                    __html:
+                                        ctaData.body ||
+                                        "Our travel experts are ready to help you find the perfect vehicle at the best rate.",
+                                }}
+                            />
                             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6">
                                 <button
                                     onClick={scrollToTop}
@@ -697,7 +857,7 @@ export default function CharterBusLanding({ data }) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 mb-8 sm:mb-12">
                         <div className="col-span-1 sm:col-span-2">
                             <h3 className="text-white text-xl sm:text-2xl font-bold mb-3 sm:mb-4">
-                                {pageData.footer?.brand || "LA Charter Bus"}
+                                {pageData.footer?.brand || "CharterBus"}
                             </h3>
                             <p className="max-w-sm mb-4 sm:mb-6 text-sm sm:text-base">
                                 {pageData.footer?.description ||

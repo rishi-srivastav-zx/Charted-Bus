@@ -1,7 +1,11 @@
 import { Bus } from "lucide-react";
 import { Facebook, Twitter, Instagram, Phone, Mail, MapPin } from "lucide-react";   
+import { BUSINESS_CONFIG } from "../app/lib/seo-cofig";
 
 const Footer = () => {
+  const currentYear = new Date().getFullYear();
+  const formatPhone = (phone) => phone.replace(/[^+\d]/g, '');
+  
   return (
     <footer className="bg-slate-950 text-white pt-24 pb-12">
       <div className="max-w-8xl mx-auto px-6 grid md:grid-cols-4 gap-12 mb-16">
@@ -11,16 +15,20 @@ const Footer = () => {
               <Bus size={24} />
             </div>
             <span className="text-2xl font-bold tracking-tight">
-              CHARTER<span className="text-orange-500">BUS</span>
+              {BUSINESS_CONFIG.name.toUpperCase().split(' ')[0]}<span className="text-orange-500">{BUSINESS_CONFIG.name.toUpperCase().includes(' ') ? ' ' + BUSINESS_CONFIG.name.split(' ')[1] : ''}</span>
             </span>
           </div>
           <p className="text-slate-500 leading-relaxed">
-            The nation&apos;s leading provider of premium charter bus rentals. Luxury, safety, and reliability in every mile.
+            {BUSINESS_CONFIG.tagline}
           </p>
           <div className="flex gap-4">
-            <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-orange-500 transition-colors"><Facebook size={20} /></a>
+            {BUSINESS_CONFIG.sameAs[0] && (
+              <a href={BUSINESS_CONFIG.sameAs[0]} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-orange-500 transition-colors"><Facebook size={20} /></a>
+            )}
             <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-orange-500 transition-colors"><Twitter size={20} /></a>
-            <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-orange-500 transition-colors"><Instagram size={20} /></a>
+            {BUSINESS_CONFIG.sameAs[1] && (
+              <a href={BUSINESS_CONFIG.sameAs[1]} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-orange-500 transition-colors"><Instagram size={20} /></a>
+            )}
           </div>
         </div>
 
@@ -49,15 +57,15 @@ const Footer = () => {
         <div>
           <h4 className="text-lg font-bold mb-6">Contact Us</h4>
           <ul className="space-y-4 text-slate-500">
-            <li className="flex items-center gap-3"><Phone size={18} className="text-orange-500" /> 1-800-PRIME-BUS</li>
-            <li className="flex items-center gap-3"><Mail size={18} className="text-orange-500" /> support@primedrive.com</li>
-            <li className="flex items-center gap-3"><MapPin size={18} className="text-orange-500" /> 123 Luxury Way, Dallas, TX</li>
+            <li className="flex items-center gap-3"><Phone size={18} className="text-orange-500" /> <a href={`tel:${formatPhone(BUSINESS_CONFIG.telephone)}`} className="hover:text-white transition-colors">{BUSINESS_CONFIG.telephone}</a></li>
+            <li className="flex items-center gap-3"><Mail size={18} className="text-orange-500" /> <a href={`mailto:${BUSINESS_CONFIG.email}`} className="hover:text-white transition-colors">{BUSINESS_CONFIG.email}</a></li>
+            <li className="flex items-center gap-3"><MapPin size={18} className="text-orange-500" /> {BUSINESS_CONFIG.address.street}, {BUSINESS_CONFIG.address.city}, {BUSINESS_CONFIG.address.region}</li>
           </ul>
         </div>
       </div>
       
       <div className="max-w-7xl mx-auto px-6 pt-12 border-t border-white/5 text-center text-slate-600 text-sm">
-        <p>&copy; 2026 PrimeDrive Charter Bus Rentals. All rights reserved.</p>
+        <p>&copy; {currentYear} {BUSINESS_CONFIG.name}. All rights reserved.</p>
       </div>
     </footer>
   );

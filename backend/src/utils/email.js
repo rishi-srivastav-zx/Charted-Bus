@@ -20,6 +20,15 @@ const createTransporter = () => {
         auth: { user, pass },
     });
 
+    
+    transporter.verify((error, success) => {
+        if (error) {
+            console.log("❌ SMTP Error:", error);
+        } else {
+            console.log("✅ SMTP is connected and ready!");
+        }
+    });
+
     return transporter;
 };
 
@@ -36,7 +45,7 @@ const sendEmail = async (options) => {
 
     try {
         const info = await transporter.sendMail({
-            from: `"LuxCharter" <${process.env.FROM_EMAIL || "concierge@luxcharter.com"}>`,
+            from: `"CharterBus" <${process.env.FROM_EMAIL || "support@charterbus.com"}>`,
             to: options.email,
             subject: options.subject,
             html: options.html,
@@ -468,465 +477,829 @@ const luxuryStyles = {
     `,
 };
 
-const formatDate = (date) => {
-    if (!date) return "To be confirmed";
-    return new Date(date).toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const formatDate = (dt) => {
+    if (!dt) return "Not specified";
+    return new Date(dt).toLocaleDateString("en-US", {
+        weekday: "short", year: "numeric", month: "short", day: "numeric",
     });
 };
 
-const formatTime = (date) => {
-    if (!date) return "To be confirmed";
-    return new Date(date).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
+const formatTime = (dt) => {
+    if (!dt) return "Not specified";
+    return new Date(dt).toLocaleTimeString("en-US", {
+        hour: "2-digit", minute: "2-digit",
     });
 };
 
-const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(amount || 0);
+const row = (label, value) => `
+    <tr>
+        <td style="padding:8px 14px;font-size:12px;color:#6B7280;border-top:1px solid #F3F4F6;width:45%;">${label}</td>
+        <td style="padding:8px 14px;font-size:12px;color:#1F2937;font-weight:500;text-align:right;border-top:1px solid #F3F4F6;">${value}</td>
+    </tr>`;
+
+// ─── Bus SVG icon (inline, no external deps) ────────────────────────────────
+const busIconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.78C19.61 17.67 20 16.88 20 16V6c0-3.5-3.58-4-8-4S4 2.5 4 6v10zm3.5 1a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM4 11V6h16v5H4z"/>
+</svg>`;
+
+const checkSvg = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <polyline points="20,6 9,17 4,12" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+// ─── Trip type badge label ───────────────────────────────────────────────────
+const tripBadgeLabel = (booking) => {
+    if (booking.tripType === "round-trip") return "&#x1F501; Round Trip";
+    if (booking.tripType === "hourly")     return "&#x23F1; Hourly Charter";
+    return "&#x27A1;&#xFE0F; One Way";
 };
 
-// ==========================================
-// LUXURY CUSTOMER CONFIRMATION EMAIL
-// ==========================================
+// ─── Main function ───────────────────────────────────────────────────────────
+
 export const sendBookingConfirmationEmail = async (booking) => {
     if (!booking.contact?.email) {
         console.warn("📧 No email address provided for booking confirmation");
         return;
     }
 
-    const isRoundTrip = booking.tripType === "round-trip";
-    const stops = booking.stops?.filter(s => s) || [];
-    const returnStops = booking.returnStops?.filter(s => s) || [];
+    const isRoundTrip  = booking.tripType === "round-trip";
+    const stops        = booking.stops?.filter(Boolean)       || [];
+    const returnStops  = booking.returnStops?.filter(Boolean) || [];
+    const firstName    = booking.contact?.firstName || "there";
+    const year         = new Date().getFullYear();
+
+    // ── Logo block (reused in header & footer) ───────────────────────────────
+    const logoHtml = (iconSize = 18, fontSize = 18) => `
+        <table cellpadding="0" cellspacing="0" style="display:inline-table;">
+            <tr>
+                <td style="vertical-align:middle;">
+                    <div style="
+                        width:${iconSize + 14}px;
+                        height:${iconSize + 14}px;
+                        background:#F59E0B;
+                        border-radius:8px;
+                        text-align:center;
+                        vertical-align:middle;
+                        line-height:${iconSize + 14}px;
+                        display:inline-block;
+                    ">
+                        <svg width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-bottom:2px;">
+                            <path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.78C19.61 17.67 20 16.88 20 16V6c0-3.5-3.58-4-8-4S4 2.5 4 6v10zm3.5 1a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM4 11V6h16v5H4z"/>
+                        </svg>
+                    </div>
+                </td>
+                <td style="padding-left:9px;vertical-align:middle;">
+                    <span style="
+                        font-size:${fontSize}px;
+                        font-weight:700;
+                        color:#FFFFFF;
+                        letter-spacing:0.3px;
+                        font-family:'Helvetica Neue',Arial,sans-serif;
+                    ">Charter<span style="color:#F59E0B;">Bus</span></span>
+                </td>
+            </tr>
+        </table>`;
 
     const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Booking Confirmed — ${booking.confirmationNumber}</title>
-        <style>
-            body { margin: 0; padding: 0; background: #F4F6F9; font-family: 'Helvetica Neue', Arial, sans-serif; }
-            @media (max-width: 600px) {
-                .wrapper { padding: 20px 16px !important; }
-                .card { padding: 28px 20px !important; }
-                .conf-num { font-size: 22px !important; }
-            }
-        </style>
-    </head>
-    <body>
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9; padding: 40px 20px;" class="wrapper">
-        <tr><td align="center">
-        <table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charter Confirmed — ${booking.confirmationNumber}</title>
+    <style>
+        body  { margin:0; padding:0; background:#F4F6F9; font-family:'Helvetica Neue',Arial,sans-serif; }
+        table { border-collapse:collapse; }
 
-            <!-- Header -->
-            <tr>
-                <td style="background:#1A2E4A; border-radius:10px 10px 0 0; padding:28px 32px; text-align:center;">
-                    <span style="font-size:26px;">🚌</span>
-                    <h1 style="margin:8px 0 4px; color:#FFFFFF; font-size:22px; font-weight:700; letter-spacing:0.5px;">
-                        Charter Confirmed
-                    </h1>
-                    <p style="margin:0; color:#A0B4CC; font-size:13px;">
-                        Booking #<strong style="color:#F0C84B;">${booking.confirmationNumber}</strong>
-                    </p>
-                </td>
-            </tr>
+        /* ── Mobile ── */
+        @media (max-width:600px) {
+            .outer-wrap  { padding:16px 10px !important; }
+            .body-card   { padding:22px 16px !important; }
+            .hd-inner    { padding:22px 16px !important; }
+            .ft-inner    { padding:16px !important; }
+            .conf-title  { font-size:17px !important; }
+            .conf-num    { font-size:12px !important; }
+            .route-cols  { display:block !important; }
+            .route-cell  { display:block !important; width:100% !important; border-right:none !important; border-bottom:1px solid #E5E7EB !important; }
+            .route-cell:last-child { border-bottom:none !important; }
+            .veh-row     { display:block !important; }
+        }
+    </style>
+</head>
+<body>
 
-            <!-- Body -->
-            <tr>
-                <td style="background:#FFFFFF; padding:32px;" class="card">
+<table width="100%" cellpadding="0" cellspacing="0" class="outer-wrap"
+       style="background:#F4F6F9; padding:36px 20px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
 
-                    <!-- Greeting -->
-                    <p style="margin:0 0 24px; color:#374151; font-size:15px; line-height:1.6;">
-                        Hi <strong>${booking.contact?.firstName || "there"}</strong>, your charter bus booking is confirmed. Here's a summary:
-                    </p>
+    <!-- ══ HEADER ════════════════════════════════════════════════════ -->
+    <tr>
+        <td class="hd-inner"
+            style="background:#0F1F3D; border-radius:12px 12px 0 0; padding:28px 28px 24px; text-align:center;">
 
-                    <!-- Trip Summary -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB; border-radius:8px; overflow:hidden; margin-bottom:24px;">
-                        <tr style="background:#F9FAFB;">
-                            <td colspan="2" style="padding:12px 16px; border-bottom:1px solid #E5E7EB;">
-                                <span style="font-size:11px; font-weight:700; letter-spacing:1px; color:#6B7280; text-transform:uppercase;">Trip Summary</span>
-                            </td>
-                        </tr>
-                        <tr><td colspan="2" style="padding:12px 16px; border-bottom:1px solid #E5E7EB; background:#F0FDF4;"><span style="font-size:12px; font-weight:700; color:#166534;">${isRoundTrip ? "🔁 Round Trip" : booking.tripType === "hourly" ? "⏱ Hourly Charter" : "➡️ One Way"}</span></td></tr>
-                        ${row("📅 Departure", formatDate(booking.datetime))}
-                        ${row("⏰ Time", formatTime(booking.datetime))}
-                        ${row("👥 Passengers", `${booking.passengers} ${booking.passengers > 1 ? "Passengers" : "Passenger"}`)}
-                        ${booking.duration ? row("⏱ Duration", `${booking.duration} Hours`) : ""}
-                    </table>
+            <!-- Logo -->
+            <div style="margin-bottom:20px;">
+                ${logoHtml(18, 19)}
+            </div>
 
-                    <!-- Outbound Trip -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB; border-radius:8px; overflow:hidden; margin-bottom:16px;">
-                        <tr style="background:#EFF6FF;">
-                            <td colspan="2" style="padding:12px 16px; border-bottom:1px solid #E5E7EB;">
-                                <span style="font-size:11px; font-weight:700; letter-spacing:1px; color:#1D4ED8; text-transform:uppercase;">${isRoundTrip ? "Outbound Trip" : "Trip Route"}</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding:12px 16px; border-bottom:1px solid #E5E7EB; width:50%;">
-                                <span style="font-size:10px; font-weight:600; color:#6B7280; text-transform:uppercase; display:block; margin-bottom:4px;">Pickup</span>
-                                <span style="font-size:13px; color:#1F2937; font-weight:500;">${booking.pickupAddress || "Not specified"}</span>
-                            </td>
-                            <td style="padding:12px 16px; border-bottom:1px solid #E5E7EB; width:50%;">
-                                <span style="font-size:10px; font-weight:600; color:#6B7280; text-transform:uppercase; display:block; margin-bottom:4px;">Drop-off</span>
-                                <span style="font-size:13px; color:#1F2937; font-weight:500;">${booking.dropoffAddress || "Not specified"}</span>
-                            </td>
-                        </tr>
-                        ${stops.length > 0 ? `
-                        <tr>
-                            <td colspan="2" style="padding:12px 16px; background:#FFFBEB;">
-                                <span style="font-size:10px; font-weight:700; color:#92400E; text-transform:uppercase; display:block; margin-bottom:8px;">🚏 Intermediate Stops (${stops.length})</span>
-                                ${stops.map((stop, i) => `<div style="font-size:12px; color:#78350F; padding:4px 0; border-bottom:1px dashed #FDE68A;">${i + 1}. ${stop}</div>`).join('')}
-                            </td>
-                        </tr>
-                        ` : ""}
-                    </table>
+            <!-- Green tick + Confirmed -->
+            <div style="display:inline-block; text-align:center;">
+                <table cellpadding="0" cellspacing="0" style="margin:0 auto 10px;">
+                    <tr>
+                        <td style="vertical-align:middle; padding-right:9px;">
+                            <!-- Green circle check -->
+                            <div style="
+                                width:28px; height:28px; border-radius:50%;
+                                background:#22C55E;
+                                display:inline-block;
+                                text-align:center; line-height:28px;
+                            ">
+                                ${checkSvg}
+                            </div>
+                        </td>
+                        <td style="vertical-align:middle;">
+                            <span class="conf-title" style="
+                                font-size:20px; font-weight:700;
+                                color:#FFFFFF; letter-spacing:0.4px;
+                                white-space:nowrap;
+                            ">Charter Bus <span style="color:#4ADE80;">Confirmed</span></span>
+                        </td>
+                    </tr>
+                </table>
+                <p class="conf-num" style="margin:0; color:#A0B4CC; font-size:13px;">
+                    Booking #<strong style="color:#F59E0B;">${booking.confirmationNumber}</strong>
+                </p>
+            </div>
+        </td>
+    </tr>
 
-                    ${isRoundTrip ? `
-                    <!-- Return Trip -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB; border-radius:8px; overflow:hidden; margin-bottom:24px;">
-                        <tr style="background:#FDF2F8;">
-                            <td colspan="2" style="padding:12px 16px; border-bottom:1px solid #E5E7EB;">
-                                <span style="font-size:11px; font-weight:700; letter-spacing:1px; color:#9D174D; text-transform:uppercase;">↩️ Return Trip</span>
-                            </td>
-                        </tr>
-                        ${booking.returnDate ? row("📅 Return Date", formatDate(booking.returnDate)) : ""}
-                        ${booking.returnPickupAddress ? row("↩️ Return Pickup", booking.returnPickupAddress) : ""}
-                        ${booking.returnDropoffAddress ? row("🏁 Return Drop-off", booking.returnDropoffAddress) : ""}
-                        ${returnStops.length > 0 ? `
-                        <tr>
-                            <td colspan="2" style="padding:12px 16px; background:#FFFBEB;">
-                                <span style="font-size:10px; font-weight:700; color:#92400E; text-transform:uppercase; display:block; margin-bottom:8px;">🚏 Return Stops (${returnStops.length})</span>
-                                ${returnStops.map((stop, i) => `<div style="font-size:12px; color:#78350F; padding:4px 0; border-bottom:1px dashed #FDE68A;">${i + 1}. ${stop}</div>`).join('')}
-                            </td>
-                        </tr>
-                        ` : ""}
-                    </table>
-                    ` : ""}
+    <!-- ══ BODY ══════════════════════════════════════════════════════ -->
+    <tr>
+        <td class="body-card"
+            style="background:#FFFFFF; padding:26px 24px;">
 
-                    <!-- Vehicle -->
-                    ${
-                        booking.busDetails
-                            ? `
-                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0F7FF; border:1px solid #BFDBFE; border-radius:8px; margin-bottom:24px;">
-                        <tr>
-                            <td style="padding:16px 18px;">
-                                <p style="margin:0 0 4px; font-size:11px; font-weight:700; letter-spacing:1px; color:#3B82F6; text-transform:uppercase;">Your Vehicle</p>
-                                <p style="margin:0 0 6px; font-size:17px; font-weight:700; color:#1E3A5F;">${booking.busDetails.name}</p>
-                                <p style="margin:0; font-size:13px; color:#4B6A88;">
-                                    🚌 Up to ${booking.busDetails.passengers} passengers
-                                    ${booking.busDetails.amenities?.length ? ` &nbsp;•&nbsp; ${booking.busDetails.amenities.join(" • ")}` : ""}
-                                </p>
-                            </td>
-                        </tr>
-                    </table>
-                    `
-                            : ""
-                    }
+            <!-- Greeting -->
+            <p style="margin:0 0 4px; font-size:15px; color:#374151;">
+                Hey <strong>${firstName}</strong>,
+            </p>
+            <p style="margin:0 0 22px; font-size:14px; color:#16A34A; font-weight:600; display:flex; align-items:center; gap:6px;">
+                <span style="
+                    display:inline-block; width:8px; height:8px;
+                    background:#22C55E; border-radius:50;
+                    margin-right:5px; vertical-align:middle;
+                "></span>
+                Your booking is confirmed!
+            </p>
 
-                    <!-- Pricing -->
-                    ${
-                        booking.pricing
-                            ? `
-                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-                        <tr><td colspan="2" style="padding:0 0 12px;"><span style="font-size:11px; font-weight:700; letter-spacing:1px; color:#6B7280; text-transform:uppercase;">Price Details</span></td></tr>
-                        ${priceRow("Charter Rate", booking.pricing.baseFare)}
-                        ${booking.pricing.fuelSurcharge ? priceRow("Fuel Surcharge", booking.pricing.fuelSurcharge) : ""}
-                        ${booking.pricing.driverGratuity ? priceRow("Driver Gratuity", booking.pricing.driverGratuity) : ""}
-                        ${booking.pricing.serviceFees ? priceRow("Service Fee", booking.pricing.serviceFees) : ""}
-                        <tr>
-                            <td style="padding:12px 0 0; border-top:2px solid #1A2E4A;">
-                                <strong style="color:#1A2E4A; font-size:15px;">Total</strong>
-                            </td>
-                            <td style="padding:12px 0 0; border-top:2px solid #1A2E4A; text-align:right;">
-                                <strong style="color:#1A2E4A; font-size:20px;">${formatCurrency(booking.pricing.totalAmount)}</strong>
-                            </td>
-                        </tr>
-                    </table>
-                    `
-                            : ""
-                    }
+            <!-- ── TRIP SUMMARY ─────────────────────────────────── -->
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="border:1px solid #E5E7EB; border-radius:8px; overflow:hidden; margin-bottom:14px;">
+                <tr style="background:#F9FAFB;">
+                    <td colspan="2" style="padding:10px 14px; border-bottom:1px solid #E5E7EB;">
+                        <span style="font-size:10px; font-weight:700; letter-spacing:1px; color:#6B7280; text-transform:uppercase;">Trip Summary</span>
+                    </td>
+                </tr>
+                <!-- Trip-type badge row -->
+                <tr>
+                    <td colspan="2" style="padding:10px 14px; border-bottom:1px solid #F3F4F6;">
+                        <span style="
+                            display:inline-block;
+                            background:#EFF6FF; color:#1D4ED8;
+                            font-size:11px; font-weight:700;
+                            padding:4px 12px; border-radius:20px;
+                        ">${tripBadgeLabel(booking)}</span>
+                    </td>
+                </tr>
+                ${row("📅 Departure", formatDate(booking.datetime))}
+                ${row("⏰ Time", formatTime(booking.datetime))}
+                ${row("👥 Passengers", `${booking.passengers} ${booking.passengers > 1 ? "Passengers" : "Passenger"}`)}
+                ${booking.duration ? row("⏱ Duration", `${booking.duration} Hours`) : ""}
+            </table>
 
-                    <!-- Notice -->
-                    <div style="background:#FFFBEB; border-left:4px solid #F0C84B; border-radius:0 6px 6px 0; padding:14px 16px; margin-bottom:24px;">
-                        <p style="margin:0; font-size:13px; color:#92400E; line-height:1.6;">
-                            ⏳ <strong>Payment link incoming.</strong> A secure payment invitation will be sent within <strong>2 hours</strong>. Your bus is held for <strong>24 hours</strong>.
+            <!-- ── TRIP ROUTE ───────────────────────────────────── -->
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="border:1px solid #E5E7EB; border-radius:8px; overflow:hidden; margin-bottom:14px;">
+                <tr style="background:#EFF6FF;">
+                    <td colspan="2" style="padding:10px 14px; border-bottom:1px solid #DBEAFE;">
+                        <span style="font-size:10px; font-weight:700; letter-spacing:1px; color:#1D4ED8; text-transform:uppercase;">
+                            ${isRoundTrip ? "Outbound Route" : "Trip Route"}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:14px; vertical-align:top; width:50%; border-right:1px solid #F3F4F6;">
+                        <!-- Pickup -->
+                        <span style="font-size:10px; font-weight:700; color:#6B7280; text-transform:uppercase; display:block; margin-bottom:7px;">
+                            📍 Pickup
+                        </span>
+                        <table cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td style="vertical-align:top; padding-right:7px;">
+                                    <div style="width:9px;height:9px;border-radius:50%;background:#3B82F6;margin-top:3px;"></div>
+                                </td>
+                                <td style="font-size:12px;color:#1F2937;font-weight:500;line-height:1.5;">
+                                    ${booking.pickupAddress || "Not specified"}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="padding:14px; vertical-align:top; width:50%;">
+                        <!-- Drop-off -->
+                        <span style="font-size:10px; font-weight:700; color:#6B7280; text-transform:uppercase; display:block; margin-bottom:7px;">
+                            🏁 Drop-off
+                        </span>
+                        <table cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td style="vertical-align:top; padding-right:7px;">
+                                    <div style="width:9px;height:9px;border-radius:50%;background:#EF4444;margin-top:3px;"></div>
+                                </td>
+                                <td style="font-size:12px;color:#1F2937;font-weight:500;line-height:1.5;">
+                                    ${booking.dropoffAddress || "Not specified"}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                ${stops.length > 0 ? `
+                <tr>
+                    <td colspan="2" style="padding:12px 14px; background:#FFFBEB; border-top:1px solid #E5E7EB;">
+                        <span style="font-size:10px; font-weight:700; color:#92400E; text-transform:uppercase; display:block; margin-bottom:8px;">🚏 Stops (${stops.length})</span>
+                        ${stops.map((s, i) => `<div style="font-size:12px;color:#78350F;padding:4px 0;border-bottom:1px dashed #FDE68A;">${i + 1}. ${s}</div>`).join("")}
+                    </td>
+                </tr>` : ""}
+            </table>
+
+            <!-- ── RETURN TRIP (round-trip only) ────────────────── -->
+            ${isRoundTrip ? `
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="border:1px solid #E5E7EB; border-radius:8px; overflow:hidden; margin-bottom:14px;">
+                <tr style="background:#FDF2F8;">
+                    <td colspan="2" style="padding:10px 14px; border-bottom:1px solid #F9D7EA;">
+                        <span style="font-size:10px; font-weight:700; letter-spacing:1px; color:#9D174D; text-transform:uppercase;">&#x21A9;&#xFE0F; Return Trip</span>
+                    </td>
+                </tr>
+                ${booking.returnDate        ? row("📅 Return Date",   formatDate(booking.returnDate))          : ""}
+                ${booking.returnPickupAddress  ? row("📍 Return Pickup",  booking.returnPickupAddress)             : ""}
+                ${booking.returnDropoffAddress ? row("🏁 Return Drop-off", booking.returnDropoffAddress)           : ""}
+                ${returnStops.length > 0 ? `
+                <tr>
+                    <td colspan="2" style="padding:12px 14px; background:#FFFBEB;">
+                        <span style="font-size:10px;font-weight:700;color:#92400E;text-transform:uppercase;display:block;margin-bottom:8px;">🚏 Return Stops (${returnStops.length})</span>
+                        ${returnStops.map((s, i) => `<div style="font-size:12px;color:#78350F;padding:4px 0;border-bottom:1px dashed #FDE68A;">${i + 1}. ${s}</div>`).join("")}
+                    </td>
+                </tr>` : ""}
+            </table>` : ""}
+
+            <!-- ── VEHICLE ──────────────────────────────────────── -->
+            ${booking.busDetails ? `
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px; margin-bottom:14px;">
+                <tr>
+                    <td style="padding:15px 16px;">
+                        <p style="margin:0 0 4px; font-size:10px; font-weight:700; letter-spacing:1px; color:#3B82F6; text-transform:uppercase;">Your Vehicle</p>
+                        <p style="margin:0 0 6px; font-size:16px; font-weight:700; color:#1E3A5F;">
+                            &#x1F68C; ${booking.busDetails.name}
                         </p>
-                    </div>
+                        <p style="margin:0; font-size:12px; color:#4B6A88; line-height:1.55;">
+                            Up to ${booking.busDetails.passengers} passengers
+                            ${booking.busDetails.amenities?.length ? ` &nbsp;&bull;&nbsp; ${booking.busDetails.amenities.join(" &bull; ")}` : ""}
+                        </p>
+                    </td>
+                </tr>
+            </table>` : ""}
 
-                    <!-- Contact -->
-                    <p style="margin:0; font-size:13px; color:#6B7280; text-align:center; line-height:1.8;">
-                        Questions? Reach us at
-                        <a href="tel:5551234567" style="color:#1A2E4A; font-weight:600; text-decoration:none;">(555) 123-4567</a>
-                        or
-                        <a href="mailto:support@luxcharter.com" style="color:#1A2E4A; font-weight:600; text-decoration:none;">support@luxcharter.com</a>
-                    </p>
+            <!-- ── NOTICE ───────────────────────────────────────── -->
+            <div style="background:#FFFBEB; border-left:3px solid #F59E0B; border-radius:0 6px 6px 0; padding:13px 15px; margin-bottom:20px;">
+                <p style="margin:0; font-size:12px; color:#92400E; line-height:1.65;">
+                    &#x23F3; <strong>Payment link incoming.</strong> A secure payment invitation will be sent within <strong>2 hours</strong>. Your bus is held for <strong>24 hours</strong>.
+                </p>
+            </div>
 
-                </td>
-            </tr>
+            <!-- ── CONTACT ──────────────────────────────────────── -->
+            <p style="margin:0; font-size:12px; color:#6B7280; text-align:center; line-height:2;">
+                Questions? Reach us at<br>
+                <a href="tel:5551234567"
+                   style="color:#0F1F3D; font-weight:700; text-decoration:none;">(555) 123-4567</a>
+                &nbsp;or&nbsp;
+                <a href="mailto:support@charterbus.com"
+                   style="color:#0F1F3D; font-weight:700; text-decoration:none;">support@charterbus.com</a>
+            </p>
 
-            <!-- Footer -->
-            <tr>
-                <td style="background:#1A2E4A; border-radius:0 0 10px 10px; padding:20px 32px; text-align:center;">
-                    <p style="margin:0 0 6px; color:#FFFFFF; font-weight:700; font-size:15px; letter-spacing:0.5px;">🚌 LuxCharter</p>
-                    <p style="margin:0 0 12px; color:#A0B4CC; font-size:11px;">Licensed • Insured • DOT Certified</p>
-                    <p style="margin:0; color:#6B7280; font-size:11px;">
-                        © ${new Date().getFullYear()} LuxCharter Inc. &nbsp;|&nbsp;
-                        <a href="https://luxcharter.com/terms" style="color:#6B7280;">Terms</a> &nbsp;|&nbsp;
-                        <a href="https://luxcharter.com/privacy" style="color:#6B7280;">Privacy</a><br><br>
-                        Sent to ${booking.contact.email}
-                    </p>
-                </td>
-            </tr>
+        </td>
+    </tr>
 
-        </table>
-        </td></tr>
-        </table>
-    </body>
-    </html>
-    `;
+    <!-- ══ FOOTER ════════════════════════════════════════════════════ -->
+    <tr>
+        <td class="ft-inner"
+            style="background:#0F1F3D; border-radius:0 0 12px 12px; padding:20px 28px; text-align:center;">
+
+            <div style="margin-bottom:10px;">
+                ${logoHtml(15, 16)}
+            </div>
+
+            <p style="margin:0 0 6px; color:#A0B4CC; font-size:11px;">
+                Licensed &nbsp;&bull;&nbsp; Insured &nbsp;&bull;&nbsp; DOT Certified
+            </p>
+            <p style="margin:0; color:#6B7280; font-size:11px; line-height:2;">
+                &copy; ${year} CharterBus Inc. &nbsp;|&nbsp;
+                <a href="https://charterbus.com/terms"   style="color:#6B7280; text-decoration:none;">Terms</a>
+                &nbsp;|&nbsp;
+                <a href="https://charterbus.com/privacy" style="color:#6B7280; text-decoration:none;">Privacy</a>
+                <br>Sent to ${booking.contact.email}
+            </p>
+        </td>
+    </tr>
+
+</table>
+</td></tr>
+</table>
+
+</body>
+</html>`;
 
     return sendEmail({
-        email: booking.contact.email,
-        subject: `Charter Confirmed 🚌 — ${booking.confirmationNumber}`,
+        email:   booking.contact.email,
+        subject: `Charter Confirmed ✅ — ${booking.confirmationNumber}`,
         html,
     });
 };
-
-// Helper: detail row
-const row = (label, value) =>
-    value
-        ? `
-    <tr>
-        <td style="padding:10px 16px; font-size:13px; color:#6B7280; border-bottom:1px solid #F3F4F6; width:42%;">${label}</td>
-        <td style="padding:10px 16px; font-size:13px; color:#111827; font-weight:500; border-bottom:1px solid #F3F4F6;">${value}</td>
-    </tr>`
-        : "";
-
-// Helper: price row
-const priceRow = (label, amount) => `
-    <tr>
-        <td style="padding:6px 0; font-size:13px; color:#6B7280;">${label}</td>
-        <td style="padding:6px 0; font-size:13px; color:#374151; text-align:right;">${formatCurrency(amount)}</td>
-    </tr>`;
 
 // ==========================================
 // LUXURY LEAD NOTIFICATION EMAIL (Internal)
 // ==========================================
 export const sendLeadNotificationEmail = async (booking) => {
-    const leadScore = calculateLeadScore(booking);
-    const priority =
-        leadScore > 80 ? "PRIORITY" : leadScore > 50 ? "STANDARD" : "ROUTINE";
-    const priorityColor =
-        leadScore > 80 ? "#DC2626" : leadScore > 50 ? "#D97706" : "#059669";
-    const responseTime = leadScore > 80 ? "15 min" : "2 hours";
+    const isRoundTrip = booking.tripType === "round-trip";
+    const stops = booking.stops?.filter(Boolean) || [];
+    const returnStops = booking.returnStops?.filter(Boolean) || [];
     const daysUntil = Math.ceil(
         (new Date(booking.datetime) - new Date()) / 86400000,
     );
-    const isHighValue = booking.pricing?.totalAmount > 2000;
-    const isRoundTrip = booking.tripType === "round-trip";
-    const stops = booking.stops?.filter(s => s) || [];
-    const returnStops = booking.returnStops?.filter(s => s) || [];
+
+    const formatDate = (date) => {
+        if (!date) return "Not specified";
+        return new Date(date).toLocaleDateString("en-US", {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    };
+
+    const formatTime = (date) => {
+        if (!date) return "Not specified";
+        return new Date(date).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    // ── Reusable inline row (label / value) ─────────────────────────────────
+    const infoRow = (label, value, isLink = false, href = "") => `
+        <tr>
+            <td style="padding:13px 18px; border-bottom:1px solid #E2E8F0;">
+                <span style="display:block; font-size:10px; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px;">${label}</span>
+                ${
+                    isLink
+                        ? `<a href="${href}" style="font-size:14px; font-weight:600; color:#0F172A; text-decoration:none;">${value}</a>`
+                        : `<span style="font-size:14px; font-weight:600; color:#0F172A;">${value}</span>`
+                }
+            </td>
+        </tr>`;
+
+    // ── Trip grid cell ───────────────────────────────────────────────────────
+    const tripCell = (label, value) => `
+        <td style="padding:8px 12px; width:50%; vertical-align:top;">
+            <span style="display:block; font-size:10px; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:5px;">${label}</span>
+            <span style="font-size:14px; font-weight:600; color:#0F172A;">${value}</span>
+        </td>`;
+
+    // ── Action step row ──────────────────────────────────────────────────────
+    const actionStep = (num, text) => `
+        <tr>
+            <td style="padding:11px 18px; border-bottom:1px solid #1E293B; vertical-align:top;">
+                <table cellpadding="0" cellspacing="0" width="100%"><tr>
+                    <td style="width:28px; vertical-align:top; padding-top:1px;">
+                        <div style="width:22px; height:22px; background:#F97316; border-radius:50%; text-align:center; line-height:22px; font-size:11px; font-weight:700; color:#fff;">${num}</div>
+                    </td>
+                    <td style="font-size:13px; color:#F1F5F9; font-weight:500; line-height:1.55; padding-left:10px;">${text}</td>
+                </tr></table>
+            </td>
+        </tr>`;
+
+    // ── Bus SVG icon ─────────────────────────────────────────────────────────
+    const busSvg = (size = 20) =>
+        `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+            <path d="M4 16c0 .88.39 1.67 1 2.22V20a1 1 0 001 1h1a1 1 0 001-1v-1h8v1a1 1 0 001 1h1a1 1 0 001-1v-1.78C19.61 17.67 20 16.88 20 16V6c0-3.5-3.58-4-8-4S4 2.5 4 6v10zm3.5 1a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm9 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM4 11V6h16v5H4z"/>
+        </svg>`;
+
+    const logoBlock = (iconSize = 20, fontSize = 20) => `
+        <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+            <tr>
+                <td style="vertical-align:middle;">
+                    <div style="width:${iconSize + 16}px; height:${iconSize + 16}px; background:#F97316; border-radius:9px; text-align:center; line-height:${iconSize + 16}px; display:inline-block; vertical-align:middle;">
+                        ${busSvg(iconSize)}
+                    </div>
+                </td>
+                <td style="padding-left:10px; vertical-align:middle;">
+                    <span style="font-size:${fontSize}px; font-weight:700; color:#FFFFFF; font-family:'Helvetica Neue',Arial,sans-serif; letter-spacing:-0.3px;">
+                        Charter<span style="color:#F97316;">Bus</span>
+                    </span>
+                </td>
+            </tr>
+        </table>`;
+
+    const tripTypeLabel = isRoundTrip
+        ? "&#x1F501; Round Trip"
+        : booking.tripType === "hourly"
+          ? "&#x23F1; Hourly Charter"
+          : "&#x27A1;&#xFE0F; One Way";
+
+    const receivedAt = new Date().toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+    });
 
     const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${priority} Lead — ${booking.confirmationNumber}</title>
-        <style>
-            body { margin: 0; padding: 0; background: #F4F6F9; font-family: 'Helvetica Neue', Arial, sans-serif; }
-            @media (max-width: 600px) {
-                .card { padding: 24px 16px !important; }
-                .stack { display: block !important; width: 100% !important; margin-bottom: 12px !important; }
-            }
-        </style>
-    </head>
-    <body>
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F6F9; padding:32px 20px;">
-        <tr><td align="center">
-        <table width="100%" style="max-width:580px;" cellpadding="0" cellspacing="0">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>New Booking Inquiry — ${booking.confirmationNumber}</title>
+    <style>
+        /* Only mobile overrides here — everything else is inline */
+        body { margin:0; padding:0; background:#F1F5F9; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
+        table { border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; }
+        img { border:0; height:auto; line-height:100%; max-width:100%; }
 
-            <!-- Priority Header -->
-            <tr>
-                <td style="background:${priorityColor}; border-radius:10px 10px 0 0; padding:24px 28px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
+        @media screen and (max-width:600px) {
+            .outer  { padding:12px 8px !important; }
+            .hd     { padding:22px 14px !important; }
+            .abar   { padding:14px !important; }
+            .body   { padding:18px 14px !important; }
+            .ft     { padding:22px 14px !important; }
+            .btn-p  { display:block !important; width:100% !important; margin:0 0 10px 0 !important; box-sizing:border-box !important; text-align:center !important; }
+            .btn-s  { display:block !important; width:100% !important; margin:0 !important; box-sizing:border-box !important; text-align:center !important; }
+            .tgrid  { display:block !important; }
+            .tcell  { display:block !important; width:100% !important; padding:8px 14px !important; border-bottom:1px solid #E2E8F0!important; border-right:none !important; }
+            .tcell:last-child { border-bottom:none !important; }
+            .vcol   { display:block !important; }
+            .vicon  { display:block !important; margin-bottom:12px !important; }
+        }
+
+        @media (prefers-color-scheme:dark) {
+            body { background:#0F172A !important; }
+        }
+    </style>
+</head>
+<body style="margin:0;padding:0;background:#F1F5F9;">
+
+<table width="100%" cellpadding="0" cellspacing="0" class="outer" style="background:#F1F5F9;padding:28px 16px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+
+    <!-- ══ HEADER ════════════════════════════════════════════════════════════ -->
+    <tr>
+        <td class="hd" style="background:#0F172A;border-radius:14px 14px 0 0;padding:28px 24px;text-align:center;">
+
+            <div style="margin-bottom:18px;">${logoBlock(20, 21)}</div>
+
+            <h1 style="margin:0 0 6px;color:#FFFFFF;font-size:20px;font-weight:700;font-family:'Helvetica Neue',Arial,sans-serif;">
+                New Booking Inquiry
+            </h1>
+            <p style="margin:0 0 10px;color:#94A3B8;font-size:13px;font-family:'Helvetica Neue',Arial,sans-serif;">
+                Received ${receivedAt} EST
+            </p>
+            <span style="display:inline-block;background:#1E293B;border:1px solid #334155;border-radius:6px;padding:5px 14px;font-size:13px;font-weight:700;color:#F97316;letter-spacing:0.8px;font-family:'Helvetica Neue',Arial,sans-serif;">
+                #${booking.confirmationNumber}
+            </span>
+        </td>
+    </tr>
+
+    <!-- ══ ACTION BAR ════════════════════════════════════════════════════════ -->
+    <tr>
+        <td class="abar" style="background:#FFFFFF;padding:16px 20px;border-bottom:1px solid #E2E8F0;text-align:center;">
+            <a href="tel:${booking.contact?.phone}" class="btn-p"
+               style="display:inline-block;padding:12px 22px;background:#0F172A;color:#FFFFFF;font-size:13px;font-weight:600;text-decoration:none;border-radius:8px;margin:0 5px 8px;font-family:'Helvetica Neue',Arial,sans-serif;">
+                &#128222; Call Customer
+            </a>
+            <a href="mailto:${booking.contact?.email}" class="btn-s"
+               style="display:inline-block;padding:11px 22px;background:#FFFFFF;color:#0F172A;font-size:13px;font-weight:600;text-decoration:none;border-radius:8px;border:2px solid #0F172A;margin:0 5px 8px;font-family:'Helvetica Neue',Arial,sans-serif;">
+                &#9993; Send Email
+            </a>
+        </td>
+    </tr>
+
+    <!-- ══ BODY ══════════════════════════════════════════════════════════════ -->
+    <tr>
+        <td class="body" style="background:#FFFFFF;padding:22px 20px;">
+
+            <!-- ── Customer Details ─────────────────────────────────────────── -->
+            <p style="margin:0 0 12px;font-size:15px;font-weight:700;color:#0F172A;font-family:'Helvetica Neue',Arial,sans-serif;">&#128100; Customer Details</p>
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;overflow:hidden;margin-bottom:20px;">
+                ${infoRow("Full Name", `${booking.contact?.firstName || ""} ${booking.contact?.lastName || "Not provided"}`.trim())}
+                ${infoRow("Phone Number", booking.contact?.phone || "Not provided", true, `tel:${booking.contact?.phone}`)}
+                <tr>
+                    <td style="padding:13px 18px;">
+                        <span style="display:block;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px;">Email Address</span>
+                        <a href="mailto:${booking.contact?.email}" style="font-size:14px;font-weight:600;color:#0F172A;text-decoration:none;font-family:'Helvetica Neue',Arial,sans-serif;">
+                            ${booking.contact?.email || "Not provided"}
+                        </a>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- ── Trip Overview ────────────────────────────────────────────── -->
+            <p style="margin:0 0 12px;font-size:15px;font-weight:700;color:#0F172A;font-family:'Helvetica Neue',Arial,sans-serif;">&#128652; Trip Overview</p>
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;overflow:hidden;margin-bottom:20px;">
+                <!-- Trip type header -->
+                <tr style="background:#DBEAFE;">
+                    <td colspan="2" style="padding:11px 16px;border-bottom:1px solid #BFDBFE;">
+                        <table width="100%" cellpadding="0" cellspacing="0"><tr>
                             <td>
-                                <p style="margin:0 0 4px; font-size:11px; font-weight:700; letter-spacing:2px; color:rgba(255,255,255,0.85); text-transform:uppercase;">New Charter Inquiry 🚌</p>
-                                <p style="margin:0; font-size:26px; font-weight:700; color:#FFFFFF;">${priority}</p>
-                                <p style="margin:6px 0 0; font-size:12px; color:rgba(255,255,255,0.8);">
-                                    Respond within <strong style="color:#FFFFFF;">${responseTime}</strong> &nbsp;•&nbsp;
-                                    ${new Date().toLocaleString("en-US", { timeZone: "America/New_York", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} EST
-                                </p>
+                                <span style="font-size:10px;font-weight:700;color:#1D4ED8;text-transform:uppercase;letter-spacing:0.8px;font-family:'Helvetica Neue',Arial,sans-serif;">${tripTypeLabel}</span>
                             </td>
-                            <td style="text-align:right; white-space:nowrap;">
-                                <div style="display:inline-block; background:rgba(255,255,255,0.2); border-radius:8px; padding:10px 18px; text-align:center;">
-                                    <p style="margin:0; font-size:10px; font-weight:700; letter-spacing:1px; color:rgba(255,255,255,0.8); text-transform:uppercase;">Score</p>
-                                    <p style="margin:4px 0 0; font-size:28px; font-weight:800; color:#FFFFFF; line-height:1;">${leadScore}</p>
-                                </div>
+                            <td style="text-align:right;">
+                                <span style="font-size:11px;font-weight:600;color:#3B82F6;font-family:'Helvetica Neue',Arial,sans-serif;">${daysUntil > 0 ? `${daysUntil} days away` : "Today!"}</span>
                             </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
+                        </tr></table>
+                    </td>
+                </tr>
+                <!-- 2-column grid -->
+                <tr class="tgrid">
+                    ${tripCell("Service Date", formatDate(booking.datetime))}
+                    <td style="width:1px;background:#DBEAFE;"></td>
+                    ${tripCell("Pickup Time", formatTime(booking.datetime))}
+                </tr>
+                <tr style="border-top:1px solid #BFDBFE;" class="tgrid">
+                    ${tripCell("Passengers", `${booking.passengers} ${booking.passengers > 1 ? "people" : "person"}`)}
+                    <td style="width:1px;background:#DBEAFE;"></td>
+                    ${tripCell(
+                        booking.duration ? "Duration" : "Trip Type",
+                        booking.duration
+                            ? `${booking.duration} hrs`
+                            : isRoundTrip
+                              ? "Round Trip"
+                              : "One Way",
+                    )}
+                </tr>
+            </table>
 
-            <!-- Quick Actions -->
-            <tr>
-                <td style="background:#FFFFFF; padding:16px 28px; border-bottom:1px solid #E5E7EB;">
-                    <a href="tel:${booking.contact?.phone}" style="display:inline-block; background:#1A2E4A; color:#FFFFFF; padding:10px 20px; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; text-decoration:none; border-radius:5px; margin-right:10px;">📞 Call</a>
-                    <a href="mailto:${booking.contact?.email}" style="display:inline-block; background:#F3F4F6; color:#1A2E4A; padding:10px 20px; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; text-decoration:none; border-radius:5px; border:1px solid #E5E7EB;">✉️ Email</a>
-                </td>
-            </tr>
+            <!-- ── Route Details ────────────────────────────────────────────── -->
+            <p style="margin:0 0 12px;font-size:15px;font-weight:700;color:#0F172A;font-family:'Helvetica Neue',Arial,sans-serif;">&#128205; Route Details</p>
 
-            <!-- Body -->
-            <tr>
-                <td style="background:#FFFFFF; padding:28px;" class="card">
-
-                    <!-- Guest + Trip side by side -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
-                        <tr>
-                            <!-- Guest -->
-                            <td style="width:48%; vertical-align:top; background:#F9FAFB; border:1px solid #E5E7EB; border-radius:8px; padding:16px;" class="stack">
-                                <p style="margin:0 0 10px; font-size:11px; font-weight:700; letter-spacing:1px; color:#6B7280; text-transform:uppercase;">Guest</p>
-                                <p style="margin:0 0 4px; font-size:16px; font-weight:700; color:#111827;">${booking.contact?.firstName} ${booking.contact?.lastName}</p>
-                                <p style="margin:0 0 4px; font-size:13px; color:#1A2E4A; font-weight:600;">${booking.contact?.phone}</p>
-                                <p style="margin:0 0 10px; font-size:12px; color:#6B7280;">${booking.contact?.email}</p>
-                                <p style="margin:0; font-family:'Courier New', monospace; font-size:13px; font-weight:700; color:#1A2E4A; letter-spacing:1px;">${booking.confirmationNumber}</p>
-                            </td>
-                            <td style="width:4%;" class="stack"></td>
-                            <!-- Trip -->
-                            <td style="width:48%; vertical-align:top; background:#F0F7FF; border:1px solid #BFDBFE; border-radius:8px; padding:16px;" class="stack">
-                                <p style="margin:0 0 10px; font-size:11px; font-weight:700; letter-spacing:1px; color:#3B82F6; text-transform:uppercase;">Trip</p>
-                                <p style="margin:0 0 4px; font-size:12px; font-weight:600; color:#1E3A5F;">
-                                    <span style="background:${isRoundTrip ? "#FDF2F8; color:#9D174D;" : "#F0FDF4; color:#166534;"}; padding:2px 8px; border-radius:4px; font-size:10px;">${isRoundTrip ? "🔁 Round Trip" : booking.tripType === "hourly" ? "⏱ Hourly" : "➡️ One Way"}</span>
-                                </p>
-                                <p style="margin:6px 0 4px; font-size:12px; color:#4B6A88;">📅 ${formatDate(booking.datetime)}</p>
-                                <p style="margin:0 0 4px; font-size:12px; color:#4B6A88;">👥 ${booking.passengers} passengers</p>
-                                ${booking.duration ? `<p style="margin:0; font-size:12px; color:#4B6A88;">⏱ ${booking.duration} Hours</p>` : ""}
-                            </td>
-                        </tr>
-                    </table>
-
-                    <!-- Route Details -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
-                        <tr>
-                            <td style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; padding:14px;">
-                                <p style="margin:0 0 10px; font-size:11px; font-weight:700; letter-spacing:1px; color:#166534; text-transform:uppercase;">${isRoundTrip ? "Outbound Route" : "Route"}</p>
-                                <p style="margin:0 0 6px; font-size:12px; color:#15803D;"><strong>📍 Pickup:</strong> ${booking.pickupAddress || "Not specified"}</p>
-                                <p style="margin:0 0 6px; font-size:12px; color:#15803D;"><strong>🏁 Drop-off:</strong> ${booking.dropoffAddress || "Not specified"}</p>
-                                ${stops.length > 0 ? `
-                                <p style="margin:8px 0 4px; font-size:11px; font-weight:700; color:#92400E;">🚏 Stops (${stops.length}):</p>
-                                ${stops.map((stop, i) => `<p style="margin:2px 0; font-size:11px; color:#78350F; padding-left:12px;">${i + 1}. ${stop}</p>`).join('')}
-                                ` : ""}
-                            </td>
-                        </tr>
-                    </table>
-
-                    ${isRoundTrip ? `
-                    <!-- Return Route -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
-                        <tr>
-                            <td style="background:#FDF2F8; border:1px solid #FBCFE8; border-radius:8px; padding:14px;">
-                                <p style="margin:0 0 10px; font-size:11px; font-weight:700; letter-spacing:1px; color:#9D174D; text-transform:uppercase;">↩️ Return Trip</p>
-                                ${booking.returnDate ? `<p style="margin:0 0 6px; font-size:12px; color:#9D174D;"><strong>📅 Return:</strong> ${formatDate(booking.returnDate)}</p>` : ""}
-                                ${booking.returnPickupAddress ? `<p style="margin:0 0 6px; font-size:12px; color:#9D174D;"><strong>📍 From:</strong> ${booking.returnPickupAddress}</p>` : ""}
-                                ${booking.returnDropoffAddress ? `<p style="margin:0 0 6px; font-size:12px; color:#9D174D;"><strong>🏁 To:</strong> ${booking.returnDropoffAddress}</p>` : ""}
-                                ${returnStops.length > 0 ? `
-                                <p style="margin:8px 0 4px; font-size:11px; font-weight:700; color:#92400E;">🚏 Return Stops (${returnStops.length}):</p>
-                                ${returnStops.map((stop, i) => `<p style="margin:2px 0; font-size:11px; color:#78350F; padding-left:12px;">${i + 1}. ${stop}</p>`).join('')}
-                                ` : ""}
-                            </td>
-                        </tr>
-                    </table>
-                    ` : ""}
-
-                    <!-- Value + Vehicle -->
-                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
-                        <tr>
-                            <!-- Value -->
-                            <td style="width:48%; vertical-align:top; background:${isHighValue ? "#FFFBEB" : "#F0FDF4"}; border:1px solid ${isHighValue ? "#FCD34D" : "#BBF7D0"}; border-radius:8px; padding:16px;" class="stack">
-                                <p style="margin:0 0 6px; font-size:11px; font-weight:700; letter-spacing:1px; color:${isHighValue ? "#92400E" : "#166534"}; text-transform:uppercase;">Est. Value</p>
-                                <p style="margin:0; font-size:28px; font-weight:800; color:${isHighValue ? "#78350F" : "#14532D"};">${formatCurrency(booking.pricing?.totalAmount)}</p>
-                                ${isHighValue ? `<span style="display:inline-block; margin-top:8px; background:#DC2626; color:#FFF; padding:3px 8px; font-size:10px; font-weight:700; letter-spacing:1px; border-radius:4px;">HIGH VALUE</span>` : ""}
-                            </td>
-                            <td style="width:4%;" class="stack"></td>
-                            <!-- Vehicle -->
-                            <td style="width:48%; vertical-align:top; background:#F9FAFB; border:1px solid #E5E7EB; border-radius:8px; padding:16px;" class="stack">
-                                <p style="margin:0 0 6px; font-size:11px; font-weight:700; letter-spacing:1px; color:#6B7280; text-transform:uppercase;">Vehicle</p>
-                                <p style="margin:0 0 6px; font-size:15px; font-weight:700; color:#111827;">${booking.busDetails?.name || "⚠️ Assign Vehicle"}</p>
-                                ${booking.busDetails?.passengers ? `<p style="margin:0 0 4px; font-size:12px; color:#6B7280;">👥 ${booking.busDetails.passengers} seats</p>` : ""}
-                                ${booking.busDetails?.amenities ? `<p style="margin:0; font-size:11px; color:#6B7280;">${booking.busDetails.amenities.slice(0, 3).join(" • ")}</p>` : ""}
-                            </td>
-                        </tr>
-                    </table>
-
-                    <!-- Lead Intel -->
-                    <div style="background:#FAF5FF; border-left:4px solid #A855F7; border-radius:0 8px 8px 0; padding:14px 16px; margin-bottom:20px;">
-                        <p style="margin:0 0 8px; font-size:11px; font-weight:700; letter-spacing:1px; color:#7C3AED; text-transform:uppercase;">Lead Intelligence</p>
-                        <p style="margin:0; font-size:13px; color:#6B21A8; line-height:1.9;">
-                            🧩 ${booking.passengers > 30 ? "Large group — Corporate/Wedding" : booking.passengers > 15 ? "Medium group — Event" : "Small group — Executive"}<br>
-                            💰 ${isHighValue ? "Premium tier" : "Standard tier"} &nbsp;•&nbsp; 📅 ${daysUntil} days until service<br>
-                            🌐 Source: Website inquiry form
-                        </p>
-                    </div>
-
-                    <!-- Action Plan -->
-                    <div style="background:#1A2E4A; border-radius:8px; padding:20px 24px;">
-                        <p style="margin:0 0 12px; font-size:11px; font-weight:700; letter-spacing:2px; color:#F0C84B; text-transform:uppercase;">Action Plan</p>
-                        ${[
-                            `Call guest within <strong style="color:#F0C84B;">${responseTime}</strong>`,
-                            `Check availability for <strong style="color:#F0C84B;">${formatDate(booking.datetime)}</strong>`,
-                            "Send personalized payment invitation",
-                            'Update CRM → <strong style="color:#F0C84B;">Contacted</strong>',
-                            "Follow up in 24 hrs if no response",
-                        ]
+            <!-- Outbound -->
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;overflow:hidden;margin-bottom:12px;">
+                <tr style="background:#DCFCE7;">
+                    <td style="padding:10px 16px;border-bottom:1px solid #BBF7D0;">
+                        <span style="font-size:10px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.8px;font-family:'Helvetica Neue',Arial,sans-serif;">
+                            &#128652; ${isRoundTrip ? "Outbound Journey" : "Journey Details"}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:16px;">
+                        <!-- Pickup -->
+                        <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px;">
+                            <tr>
+                                <td style="width:30px;vertical-align:top;padding-top:2px;">
+                                    <div style="width:26px;height:26px;background:#3B82F6;border-radius:50%;text-align:center;line-height:26px;font-size:13px;color:#fff;">&#128205;</div>
+                                </td>
+                                <td style="padding-left:10px;vertical-align:top;">
+                                    <span style="display:block;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;font-family:'Helvetica Neue',Arial,sans-serif;">Pickup</span>
+                                    <span style="font-size:13px;font-weight:500;color:#0F172A;line-height:1.5;font-family:'Helvetica Neue',Arial,sans-serif;">${booking.pickupAddress || "Not specified"}</span>
+                                </td>
+                            </tr>
+                        </table>
+                        <!-- Connector line -->
+                        <div style="margin-left:12px;width:2px;height:14px;background:#D1D5DB;margin-bottom:8px;"></div>
+                        <!-- Drop-off -->
+                        <table cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                                <td style="width:30px;vertical-align:top;padding-top:2px;">
+                                    <div style="width:26px;height:26px;background:#EF4444;border-radius:50%;text-align:center;line-height:26px;font-size:13px;color:#fff;">&#127937;</div>
+                                </td>
+                                <td style="padding-left:10px;vertical-align:top;">
+                                    <span style="display:block;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;font-family:'Helvetica Neue',Arial,sans-serif;">Drop-off</span>
+                                    <span style="font-size:13px;font-weight:500;color:#0F172A;line-height:1.5;font-family:'Helvetica Neue',Arial,sans-serif;">${booking.dropoffAddress || "Not specified"}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                ${
+                    stops.length > 0
+                        ? `
+                <tr>
+                    <td style="padding:12px 16px;background:#FFFBEB;border-top:1px solid #BBF7D0;">
+                        <span style="display:block;font-size:10px;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;font-family:'Helvetica Neue',Arial,sans-serif;">&#128655; Stops (${stops.length})</span>
+                        ${stops
                             .map(
-                                (step, i) => `
-                        <p style="margin:0 0 8px; font-size:13px; color:rgba(255,255,255,0.9); display:flex; gap:10px;">
-                            <span style="color:#F0C84B; font-weight:700; min-width:16px;">${i + 1}.</span> ${step}
-                        </p>`,
+                                (s, i) => `
+                        <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:${i < stops.length - 1 ? "8px" : "0"};">
+                            <tr>
+                                <td style="width:26px;vertical-align:top;">
+                                    <div style="width:22px;height:22px;background:#F59E0B;border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:700;color:#fff;">${i + 1}</div>
+                                </td>
+                                <td style="padding-left:10px;font-size:12px;color:#78350F;font-weight:500;font-family:'Helvetica Neue',Arial,sans-serif;">${s}</td>
+                            </tr>
+                        </table>`,
                             )
                             .join("")}
-                    </div>
+                    </td>
+                </tr>`
+                        : ""
+                }
+            </table>
 
-                </td>
-            </tr>
+            <!-- Return journey -->
+            ${
+                isRoundTrip
+                    ? `
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#FDF2F8;border:1px solid #FBCFE8;border-radius:10px;overflow:hidden;margin-bottom:12px;">
+                <tr style="background:#FCE7F3;">
+                    <td style="padding:10px 16px;border-bottom:1px solid #FBCFE8;">
+                        <span style="font-size:10px;font-weight:700;color:#9D174D;text-transform:uppercase;letter-spacing:0.8px;font-family:'Helvetica Neue',Arial,sans-serif;">
+                            &#x21A9;&#xFE0F; Return Journey
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:16px;">
+                        ${
+                            booking.returnDate
+                                ? `
+                        <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:12px;">
+                            <tr>
+                                <td style="width:30px;vertical-align:top;padding-top:2px;">
+                                    <div style="width:26px;height:26px;background:#A855F7;border-radius:50%;text-align:center;line-height:26px;font-size:13px;color:#fff;">&#128197;</div>
+                                </td>
+                                <td style="padding-left:10px;vertical-align:top;">
+                                    <span style="display:block;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;font-family:'Helvetica Neue',Arial,sans-serif;">Return Date</span>
+                                    <span style="font-size:13px;font-weight:500;color:#0F172A;font-family:'Helvetica Neue',Arial,sans-serif;">${formatDate(booking.returnDate)}</span>
+                                </td>
+                            </tr>
+                        </table>`
+                                : ""
+                        }
+                        <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:8px;">
+                            <tr>
+                                <td style="width:30px;vertical-align:top;padding-top:2px;">
+                                    <div style="width:26px;height:26px;background:#3B82F6;border-radius:50%;text-align:center;line-height:26px;font-size:13px;color:#fff;">&#128205;</div>
+                                </td>
+                                <td style="padding-left:10px;vertical-align:top;">
+                                    <span style="display:block;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;font-family:'Helvetica Neue',Arial,sans-serif;">Return Pickup</span>
+                                    <span style="font-size:13px;font-weight:500;color:#0F172A;line-height:1.5;font-family:'Helvetica Neue',Arial,sans-serif;">${booking.returnPickupAddress || booking.dropoffAddress || "Not specified"}</span>
+                                </td>
+                            </tr>
+                        </table>
+                        <div style="margin-left:12px;width:2px;height:14px;background:#D1D5DB;margin-bottom:8px;"></div>
+                        <table cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                                <td style="width:30px;vertical-align:top;padding-top:2px;">
+                                    <div style="width:26px;height:26px;background:#EF4444;border-radius:50%;text-align:center;line-height:26px;font-size:13px;color:#fff;">&#127937;</div>
+                                </td>
+                                <td style="padding-left:10px;vertical-align:top;">
+                                    <span style="display:block;font-size:10px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:3px;font-family:'Helvetica Neue',Arial,sans-serif;">Return Drop-off</span>
+                                    <span style="font-size:13px;font-weight:500;color:#0F172A;line-height:1.5;font-family:'Helvetica Neue',Arial,sans-serif;">${booking.returnDropoffAddress || booking.pickupAddress || "Not specified"}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                ${
+                    returnStops.length > 0
+                        ? `
+                <tr>
+                    <td style="padding:12px 16px;background:#FFFBEB;border-top:1px solid #FBCFE8;">
+                        <span style="display:block;font-size:10px;font-weight:700;color:#92400E;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;font-family:'Helvetica Neue',Arial,sans-serif;">&#128655; Return Stops (${returnStops.length})</span>
+                        ${returnStops
+                            .map(
+                                (s, i) => `
+                        <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:${i < returnStops.length - 1 ? "8px" : "0"};">
+                            <tr>
+                                <td style="width:26px;vertical-align:top;">
+                                    <div style="width:22px;height:22px;background:#F59E0B;border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:700;color:#fff;">${i + 1}</div>
+                                </td>
+                                <td style="padding-left:10px;font-size:12px;color:#78350F;font-weight:500;font-family:'Helvetica Neue',Arial,sans-serif;">${s}</td>
+                            </tr>
+                        </table>`,
+                            )
+                            .join("")}
+                    </td>
+                </tr>`
+                        : ""
+                }
+            </table>`
+                    : ""
+            }
 
-            <!-- Footer -->
-            <tr>
-                <td style="background:#E5E7EB; border-radius:0 0 10px 10px; padding:14px 28px; text-align:center;">
-                    <p style="margin:0; font-size:11px; color:#9CA3AF; letter-spacing:1px;">
-                        LuxCharter Internal &nbsp;•&nbsp; Dispatch ID: ${booking.confirmationNumber}-${Date.now().toString().slice(-4)}
-                    </p>
-                </td>
-            </tr>
+            <!-- ── Vehicle ──────────────────────────────────────────────────── -->
+            <p style="margin:20px 0 12px;font-size:15px;font-weight:700;color:#0F172A;font-family:'Helvetica Neue',Arial,sans-serif;">&#128652; Vehicle Information</p>
 
-        </table>
-        </td></tr>
-        </table>
-    </body>
-    </html>
-    `;
+            ${
+                booking.busDetails
+                    ? `
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#F0F9FF;border:1px solid #BAE6FD;border-radius:10px;overflow:hidden;margin-bottom:20px;">
+                <tr>
+                    <td style="padding:16px 18px;">
+                        <span style="display:block;font-size:10px;font-weight:700;color:#0284C7;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;font-family:'Helvetica Neue',Arial,sans-serif;">Assigned Vehicle</span>
+                        <table cellpadding="0" cellspacing="0" width="100%" class="vcol">
+                            <tr>
+                                <td class="vicon" style="width:62px;vertical-align:top;">
+                                    <div style="width:54px;height:54px;background:#0EA5E9;border-radius:12px;text-align:center;line-height:54px;font-size:26px;">&#128652;</div>
+                                </td>
+                                <td style="padding-left:14px;vertical-align:top;">
+                                    <p style="margin:0 0 5px;font-size:17px;font-weight:700;color:#0C4A6E;font-family:'Helvetica Neue',Arial,sans-serif;">${booking.busDetails.name}</p>
+                                    <p style="margin:0;font-size:12px;color:#0369A1;line-height:1.6;font-family:'Helvetica Neue',Arial,sans-serif;">
+                                        &#128101; ${booking.busDetails.passengers} passengers
+                                        ${booking.busDetails.amenities?.length ? `<br>&#10024; ${booking.busDetails.amenities.join(" &bull; ")}` : ""}
+                                    </p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>`
+                    : `
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;overflow:hidden;margin-bottom:20px;">
+                <tr>
+                    <td style="padding:16px 18px;">
+                        <span style="display:block;font-size:10px;font-weight:700;color:#DC2626;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;font-family:'Helvetica Neue',Arial,sans-serif;">&#9888;&#65039; Action Required</span>
+                        <p style="margin:0 0 3px;font-size:16px;font-weight:700;color:#7F1D1D;font-family:'Helvetica Neue',Arial,sans-serif;">Vehicle Not Assigned</p>
+                        <p style="margin:0;font-size:13px;color:#B91C1C;font-family:'Helvetica Neue',Arial,sans-serif;">Please assign a vehicle for ${booking.passengers} passengers</p>
+                    </td>
+                </tr>
+            </table>`
+            }
+
+            <!-- ── Next Steps ───────────────────────────────────────────────── -->
+            <p style="margin:0 0 12px;font-size:15px;font-weight:700;color:#0F172A;font-family:'Helvetica Neue',Arial,sans-serif;">&#9989; Next Steps</p>
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#0F172A;border-radius:10px;overflow:hidden;margin-bottom:8px;">
+                <tr>
+                    <td style="padding:14px 18px 4px;">
+                        <span style="font-size:10px;font-weight:700;letter-spacing:1px;color:#F97316;text-transform:uppercase;font-family:'Helvetica Neue',Arial,sans-serif;">Action Plan for Team</span>
+                    </td>
+                </tr>
+                ${actionStep(1, `Contact customer within <strong style="color:#F97316;">2 hours</strong>`)}
+                ${actionStep(2, `Verify availability for <strong style="color:#F97316;">${formatDate(booking.datetime)}</strong>`)}
+                ${actionStep(3, booking.busDetails ? "Confirm vehicle assignment" : "Assign appropriate vehicle")}
+                ${actionStep(4, "Send pricing and payment link")}
+                <tr>
+                    <td style="padding:11px 18px;vertical-align:top;">
+                        <table cellpadding="0" cellspacing="0" width="100%"><tr>
+                            <td style="width:28px;vertical-align:top;padding-top:1px;">
+                                <div style="width:22px;height:22px;background:#F97316;border-radius:50%;text-align:center;line-height:22px;font-size:11px;font-weight:700;color:#fff;">5</div>
+                            </td>
+                            <td style="font-size:13px;color:#F1F5F9;font-weight:500;line-height:1.55;padding-left:10px;font-family:'Helvetica Neue',Arial,sans-serif;">
+                                Update CRM to <strong style="color:#F97316;">"Contacted"</strong>
+                            </td>
+                        </tr></table>
+                    </td>
+                </tr>
+            </table>
+
+        </td>
+    </tr>
+
+    <!-- ══ FOOTER ════════════════════════════════════════════════════════════ -->
+    <tr>
+        <td class="ft" style="background:#0F172A;border-radius:0 0 14px 14px;padding:24px;text-align:center;">
+            <div style="margin-bottom:12px;">${logoBlock(16, 17)}</div>
+            <p style="margin:0 0 6px;color:#94A3B8;font-size:12px;font-family:'Helvetica Neue',Arial,sans-serif;">
+                Licensed &nbsp;&bull;&nbsp; Insured &nbsp;&bull;&nbsp; DOT Certified
+            </p>
+            <p style="margin:0;color:#475569;font-size:11px;line-height:2;font-family:'Helvetica Neue',Arial,sans-serif;">
+                Internal Notification &nbsp;|&nbsp; ID: ${booking._id || booking.id || booking.confirmationNumber}<br>
+                ${new Date().toISOString()}
+            </p>
+        </td>
+    </tr>
+
+</table>
+</td></tr>
+</table>
+
+</body>
+</html>`;
 
     return sendEmail({
-        email: process.env.DISPATCH_EMAIL || "dispatch@luxcharter.com",
-        subject: `${priority} 🚌 ${booking.contact?.lastName} — ${formatCurrency(booking.pricing?.totalAmount || 0)} — ${booking.confirmationNumber}`,
+        email: process.env.DISPATCH_EMAIL || "dispatch@charterbus.com",
+        subject: `&#x1F68C; New Inquiry — ${booking.contact?.lastName || "Customer"} — ${booking.confirmationNumber}`,
         html,
     });
 };
@@ -1027,14 +1400,14 @@ export const sendPaymentInvitationEmail = async (booking, paymentLink) => {
             <div style="${luxuryStyles.signature}">
                 <p style="margin: 0;">With appreciation,</p>
                 <p style="margin: 10px 0 0 0; color: #0A192F; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; font-size: 12px; font-style: normal;">
-                    LuxCharter Concierge
+                    CharterBus Concierge
                 </p>
             </div>
 
         </div>
 
         <div style="${luxuryStyles.footer}">
-            <p style="${luxuryStyles.footerBrand}">LuxCharter</p>
+            <p style="${luxuryStyles.footerBrand}">CharterBus</p>
             <p style="${luxuryStyles.footerText}">
                 Premium Transportation Services<br>
                 Licensed • Insured • Bonded

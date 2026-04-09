@@ -20,8 +20,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SidebarItem } from "./sidebaritem";
-import { cn } from "@/app/lib/uitls";
-import { useAuth } from "@/services/useAuth.js";
+import { cn } from "../../app/lib/uitls";
+import { useAuth } from "../../services/useAuth.js";
 
 export const Sidebar = ({ currentView, onNavigate, isMobileOpen, onMobileClose }) => {
     const [isCollapsed, setIsCollapsed] = useState(false);

@@ -4,7 +4,7 @@ import { tokenInterceptor } from "./tokenInterceptor";
 const isBrowser = () => typeof window !== "undefined";  
 
 const apiClient = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
+    baseURL: process.env.NEXT_PUBLIC_API_URL,
     headers: { "Content-Type": "application/json" },
     paramsSerializer: (params) => {
         const qs = new URLSearchParams(params).toString();

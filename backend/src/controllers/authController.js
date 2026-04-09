@@ -36,7 +36,7 @@ export const registerSuperAdmin = async (req, res) => {
         }
 
         // Check if super admin already exists
-        const existingSuperAdmin = await User.findOne({ role: "superadmin" });
+        const existingSuperAdmin = await User.findOne({ role: "superadmin", isDeleted: false });
         if (existingSuperAdmin) {
             return res.status(400).json({
                 success: false,
@@ -123,7 +123,7 @@ export const login = async (req, res) => {
         }
 
         // Get user with password
-        const user = await User.findOne({ email }).select("+password");
+        const user = await User.findOne({ email, isDeleted: false }).select("+password");
 
         if (!user) {
             return res.status(401).json({
@@ -155,7 +155,7 @@ export const login = async (req, res) => {
         // Reset login attempts on successful login
         if (user.loginAttempts > 0) {
             await User.updateOne(
-                { _id: user._id },
+                { _id: user._id, isDeleted: false },
                 { $set: { loginAttempts: 0 }, $unset: { lockUntil: 1 } },
             );
         }
@@ -229,6 +229,7 @@ export const refresh = async (req, res) => {
         const user = await User.findOne({
             _id: decoded.userId,
             "refreshTokens.token": refreshToken,
+            isDeleted: false,
         });
 
         if (!user) {
@@ -283,7 +284,7 @@ export const logout = async (req, res) => {
         if (req.user && refreshToken) {
             // Remove refresh token from database
             await User.updateOne(
-                { _id: req.user._id },
+                { _id: req.user._id, isDeleted: false },
                 { $pull: { refreshTokens: { token: refreshToken } } },
             );
         }
@@ -311,7 +312,7 @@ export const logoutAll = async (req, res) => {
     try {
         // Remove all refresh tokens
         await User.updateOne(
-            { _id: req.user._id },
+            { _id: req.user._id, isDeleted: false },
             { $set: { refreshTokens: [] } },
         );
 
@@ -336,7 +337,7 @@ export const logoutAll = async (req, res) => {
 // @access  Private
 export const getMe = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id);
+        const user = await User.findOne({ _id: req.user._id, isDeleted: false });
 
         res.json({
             success: true,
@@ -368,7 +369,7 @@ export const changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
 
-        const user = await User.findById(req.user._id).select("+password");
+        const user = await User.findOne({ _id: req.user._id, isDeleted: false }).select("+password");
 
         // Verify current password
         const isMatch = await user.comparePassword(currentPassword);

@@ -30,7 +30,7 @@ import {
     deletePage,
     getPageById,
     publishPage,
-} from "@/services/landingpage";
+} from "../../services/landingpage";
 import toast from "react-hot-toast";
 import Link from "next/link";
 

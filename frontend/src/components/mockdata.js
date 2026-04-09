@@ -105,7 +105,7 @@ export const REVIEWS = [
     name: "Sarah Jenkins",
     role: "Event Coordinator",
     img: "https://images.squarespace-cdn.com/content/v1/5d5dc63edddf3e000159963c/1616554943014-9OXV3JCPC7KJONPJBDSL/event-planner-atlanta-brand-photographer-katya-vilchyk_0024.jpg",
-    text: "PrimeDrive made our corporate retreat seamless. The bus was spotless and the driver was incredibly professional."
+    text: "CharterBus made our corporate retreat seamless. The bus was spotless and the driver was incredibly professional."
   },
   {
     name: "Michael Chen",
@@ -117,7 +117,7 @@ export const REVIEWS = [
     name: "Jessica Alva",
     role: "School Principal",
     img: "https://png.pngtree.com/thumb_back/fw800/background/20250323/pngtree-confident-mature-woman-exudes-ambition-and-success-in-closeup-portrait-photo-photo-image_68395030.webp",
-    text: "Safety is our top priority for school trips. PrimeDrive exceeded all our expectations with their safety protocols."
+    text: "Safety is our top priority for school trips. CharterBus exceeded all our expectations with their safety protocols."
   }
 ];
 
