@@ -25,11 +25,10 @@ interface SitemapEntry {
  * Enterprise-Grade Sitemap Generator
  *
  * Google Best Practices Implemented:
- * - lastmod: REQUIRED - Google uses this for crawl scheduling [^2^][^3^]
- * - priority: HINT only - 0.0 to 1.0 relative importance [^1^][^4^]
- * - changefreq: HINT only - realistic update patterns [^3^][^5^]
+ * - lastmod: REQUIRED - Google uses this for crawl scheduling
+ * - priority: HINT only - 0.0 to 1.0 relative importance
+ * - changefreq: HINT only - realistic update patterns
  * - URL limit: Max 50,000 URLs per sitemap file
- * - Size limit: Max 50MB uncompressed
  */
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -49,21 +48,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 1.0,
         },
         {
-            url: `${normalizedBaseUrl}/fleet`,
+            // Note: Actual route is /BusPage
+            url: `${normalizedBaseUrl}/BusPage`,
             lastModified: new Date(),
             changeFrequency: "weekly",
             priority: 0.9,
         },
         {
-            url: `${normalizedBaseUrl}/services`,
+            // Note: Actual route is /bookingform
+            url: `${normalizedBaseUrl}/bookingform`,
             lastModified: new Date(),
-            changeFrequency: "weekly",
-            priority: 0.9,
-        },
-        {
-            url: `${normalizedBaseUrl}/booking`,
-            lastModified: new Date(),
-            changeFrequency: "daily", // High conversion page, check daily
+            changeFrequency: "daily",
             priority: 0.95,
         },
     ];
@@ -79,31 +74,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         if (Array.isArray(pages) && pages.length > 0) {
             locationPages = pages
                 .map((page: any) => {
-                    // Parse slug: "usa/new-york" or "new-york"
                     const slugParts = page.slug?.split("/") || [];
                     const citySlug = slugParts.pop() || "";
                     const countrySlug = slugParts[0] || "usa";
 
-                    // Validate we have a city slug
-                    if (!citySlug) {
-                        console.warn(`Invalid page slug: ${page.slug}`);
-                        return null;
-                    }
+                    if (!citySlug) return null;
 
-                    // Determine priority based on business rules
                     const isMajorCity = [
                         "new-york",
                         "los-angeles",
                         "chicago",
                         "miami",
                     ].includes(citySlug.toLowerCase());
+                    
                     const priority = page.isFeatured
                         ? 0.85
                         : isMajorCity
                           ? 0.8
                           : 0.6;
 
-                    // Determine change frequency based on update patterns
                     const lastUpdate = new Date(
                         page.updatedAt || page.createdAt || Date.now(),
                     );
@@ -113,19 +102,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                     );
 
                     let changeFrequency: ChangeFrequency = "monthly";
-                    if (page.isFeatured) changeFrequency = "weekly";
-                    else if (daysSinceUpdate < 7) changeFrequency = "weekly";
-                    else if (daysSinceUpdate < 30) changeFrequency = "monthly";
+                    if (page.isFeatured || daysSinceUpdate < 7) changeFrequency = "weekly";
+
+                    // Note: Dynamic routes live under /bookingform/[country]/[city]
+                    const pageUrl = `${normalizedBaseUrl}/bookingform/${countrySlug}/${citySlug}`;
 
                     return {
-                        url: `${normalizedBaseUrl}/${countrySlug}/${citySlug}`,
+                        url: pageUrl,
                         lastModified: lastUpdate,
                         changeFrequency,
                         priority,
                         alternates: {
                             languages: {
-                                "en-US": `${normalizedBaseUrl}/${countrySlug}/${citySlug}`,
-                                "x-default": `${normalizedBaseUrl}/${countrySlug}/${citySlug}`,
+                                "en-US": pageUrl,
+                                "x-default": pageUrl,
                             },
                         },
                     };
@@ -134,57 +124,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }
     } catch (error) {
         console.error("Failed to fetch dynamic pages for sitemap:", error);
-        // Continue with static pages only - don't fail the build
     }
 
     // ==========================================
-    // 3. UTILITY PAGES (Lower Priority)
+    // 3. AUTH & UTILITY PAGES
     // ==========================================
     const utilityPages: SitemapEntry[] = [
         {
-            url: `${normalizedBaseUrl}/about`,
-            lastModified: new Date("2024-01-01"), // Static page, rarely changes
-            changeFrequency: "yearly",
-            priority: 0.5,
-        },
-        {
-            url: `${normalizedBaseUrl}/contact`,
-            lastModified: new Date("2024-01-01"),
-            changeFrequency: "yearly",
-            priority: 0.5,
-        },
-        {
-            url: `${normalizedBaseUrl}/privacy`,
-            lastModified: new Date("2024-01-01"),
-            changeFrequency: "yearly",
-            priority: 0.3,
-        },
-        {
-            url: `${normalizedBaseUrl}/terms`,
-            lastModified: new Date("2024-01-01"),
-            changeFrequency: "yearly",
-            priority: 0.3,
-        },
-        {
-            url: `${normalizedBaseUrl}/faq`,
-            lastModified: new Date(),
-            changeFrequency: "monthly",
-            priority: 0.4,
-        },
-    ];
-
-    // ==========================================
-    // 4. AUTH PAGES (Lowest Priority - Indexable but not emphasized)
-    // ==========================================
-    const authPages: SitemapEntry[] = [
-        {
             url: `${normalizedBaseUrl}/login`,
-            lastModified: new Date("2024-01-01"),
-            changeFrequency: "yearly",
-            priority: 0.1,
-        },
-        {
-            url: `${normalizedBaseUrl}/register`,
             lastModified: new Date("2024-01-01"),
             changeFrequency: "yearly",
             priority: 0.1,
@@ -198,22 +145,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         ...corePages,
         ...locationPages,
         ...utilityPages,
-        ...authPages,
     ];
 
-    // Sort by priority descending (hints importance to crawlers)
+    // Sort by priority descending
     const sortedEntries = allEntries.sort((a, b) => b.priority - a.priority);
 
-    // Validate: Ensure we don't exceed 50,000 URLs
-    if (sortedEntries.length > 50000) {
-        console.warn(
-            `Sitemap exceeds 50,000 URLs (${sortedEntries.length}). Consider splitting into sitemap index.`,
-        );
-        // Return top 50,000 by priority
-        return sortedEntries.slice(0, 50000);
-    }
-
-    return sortedEntries;
+    // Limit to 50,000 URLs
+    return sortedEntries.slice(0, 50000);
 }
 
 // ==========================================
