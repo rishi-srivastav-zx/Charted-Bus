@@ -16,14 +16,18 @@ const createTransporter = () => {
     const transporter = nodemailer.createTransport({
         host,
         port,
-        secure: port === 465,
+        secure: port === 465, // Use SSL for port 465
         auth: { user, pass },
+        connectionTimeout: 10000, // 10 seconds timeout
     });
 
-    
+    // Verify connection configuration
     transporter.verify((error, success) => {
         if (error) {
-            console.log("❌ SMTP Error:", error);
+            console.error("❌ SMTP Connection Error:", error.message);
+            if (port === 587) {
+                console.warn("💡 Tip: Many cloud providers (like Render/AWS) block port 587. Try using port 465 with SSL if you encounter timeouts.");
+            }
         } else {
             console.log("✅ SMTP is connected and ready!");
         }
