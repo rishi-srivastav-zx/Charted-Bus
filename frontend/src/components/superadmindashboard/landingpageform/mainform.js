@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { getCountries, getCities } from "../../../services/countryapi";    
+import { Loader2, Camera, Upload, X, Image as ImageIcon } from "lucide-react";
+import { uploadImage } from "../../../services/busservices";
 
 const Label = ({ children, required }) => (
     <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
@@ -284,9 +286,11 @@ export default function CharterBusForm({ initialData, onSave }) {
     const [showCountryDropdown, setShowCountryDropdown] = useState(false);
     const [showCityDropdown, setShowCityDropdown] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [isUploadingOg, setIsUploadingOg] = useState(false);
 
     const countryRef = useRef(null);
     const cityRef = useRef(null);
+    const ogImageInputRef = useRef(null);
 
     useEffect(() => {
         function handleClickOutside(e) {
@@ -301,9 +305,39 @@ export default function CharterBusForm({ initialData, onSave }) {
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-    
-   
-  
+
+    const handleOgImageUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Basic validation
+        const validTypes = ["image/jpeg", "image/png", "image/webp"];
+        if (!validTypes.includes(file.type)) {
+            alert("Please upload a valid image (JPG, PNG, or WebP)");
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            alert("Image size should be less than 10MB");
+            return;
+        }
+
+        setIsUploadingOg(true);
+        try {
+            const formData = new FormData();
+            formData.append("image", file);
+
+            const res = await uploadImage(formData);
+            if (res.data?.url) {
+                setSeo("og_image", res.data.url);
+            }
+        } catch (err) {
+            console.error("OG Image upload failed:", err);
+            alert("Failed to upload image. Please try again.");
+        } finally {
+            setIsUploadingOg(false);
+        }
+    };
     return (
         <div className="bg-white">
             {/* Tab bar */}
@@ -646,16 +680,81 @@ export default function CharterBusForm({ initialData, onSave }) {
                         </div>
 
                         <div>
-                            <Label>OG Image URL</Label>
-                            <Input
-                                value={data.seo?.og_image || ""}
-                                onChange={(v) => setSeo("og_image", v)}
-                                placeholder="https://yoursite.com/images/og-new-york.jpg"
-                                error={errors["seo.og_image"]}
-                            />
-                            <p className="text-xs text-gray-400 mt-1">
-                                Recommended size: 1200×630px
-                            </p>
+                            <Label>OG Image</Label>
+                            <div className="space-y-3">
+                                <div 
+                                    className={`relative border-2 border-dashed rounded-lg p-4 transition-all
+                                        ${data.seo?.og_image ? "border-blue-200 bg-blue-50/30" : "border-gray-200 hover:border-blue-400 bg-gray-50/50"}`}
+                                >
+                                    {data.seo?.og_image ? (
+                                        <div className="relative group">
+                                            <img
+                                                src={data.seo.og_image}
+                                                alt="OG Preview"
+                                                className="w-full h-40 object-cover rounded-md shadow-sm"
+                                            />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-md">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => ogImageInputRef.current?.click()}
+                                                    className="p-2 bg-white rounded-full text-blue-600 hover:bg-blue-50 transition-colors mr-2"
+                                                    title="Change Image"
+                                                >
+                                                    <Camera className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSeo("og_image", "")}
+                                                    className="p-2 bg-white rounded-full text-red-600 hover:bg-red-50 transition-colors"
+                                                    title="Remove Image"
+                                                >
+                                                    <X className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div 
+                                            className="flex flex-col items-center justify-center py-4 cursor-pointer"
+                                            onClick={() => ogImageInputRef.current?.click()}
+                                        >
+                                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3 border border-gray-100">
+                                                {isUploadingOg ? (
+                                                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                                                ) : (
+                                                    <Upload className="w-6 h-6 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <p className="text-sm font-medium text-gray-700">
+                                                {isUploadingOg ? "Uploading..." : "Click to upload OG image"}
+                                            </p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Recommended: 1200×630px (JPG, PNG, WebP)
+                                            </p>
+                                        </div>
+                                    )}
+                                    <input
+                                        ref={ogImageInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleOgImageUpload}
+                                        className="hidden"
+                                    />
+                                </div>
+
+                                {/* Fallback URL input */}
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <ImageIcon className="h-4 w-4 text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={data.seo?.og_image || ""}
+                                        onChange={(e) => setSeo("og_image", e.target.value)}
+                                        placeholder="Or paste image URL here..."
+                                        className="w-full pl-10 pr-3 py-2 text-xs border border-gray-300 rounded-md outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white"
+                                    />
+                                </div>
+                            </div>
                         </div>
 
                         {/* Google Search Preview */}

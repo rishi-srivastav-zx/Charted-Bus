@@ -453,8 +453,6 @@ export default function BusForm({
                 e.seatCapacity = "Seat capacity is required";
         }
         if (activeTab === "specs") {
-            if (!formData.licensePlate.trim())
-                e.licensePlate = "License plate is required";
             if (!formData.fuelType) e.fuelType = "Fuel type is required";
         }
         if (activeTab === "pricing") {
@@ -478,8 +476,6 @@ export default function BusForm({
         if (!formData.category) e.category = "Category is required";
         if (!formData.seatCapacity)
             e.seatCapacity = "Seat capacity is required";
-        if (!formData.licensePlate.trim())
-            e.licensePlate = "License plate is required";
         if (!formData.pricing.price) e.price = "Selling price is required";
         if (!formData.pricing.originalPrice)
             e.originalPrice = "Original price is required";
@@ -953,9 +949,6 @@ export default function BusForm({
                                         <div className="space-y-1">
                                             <label className="text-sm font-bold text-slate-700">
                                                 License Plate{" "}
-                                                <span className="text-red-500">
-                                                    *
-                                                </span>
                                             </label>
                                             <input
                                                 type="text"
@@ -1202,8 +1195,8 @@ export default function BusForm({
                                                 <option value="per_month">
                                                     Per Month
                                                 </option>
-                                                <option value="per_km">
-                                                    Per Kilometer
+                                                <option value="per_mile">
+                                                    Per Mile
                                                 </option>
                                             </select>
                                         </div>

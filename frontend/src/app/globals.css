@@ -346,3 +346,7 @@ input:focus, select:focus, textarea:focus {
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: #f97316;
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
